@@ -146,7 +146,7 @@ class PlasmaParticles:
         pr = np.zeros(self.n_elec)
         pz = np.zeros(self.n_elec)
         gamma = np.ones(self.n_elec)
-        tag = np.arange(self.n_elec, dtype=np.int32)
+        id = np.arange(self.n_elec, dtype=np.int32)
         w = dr_p * r * self.radial_density(r)
         w_center = w / 2 - dr_p**2 / 8
 
@@ -165,7 +165,7 @@ class PlasmaParticles:
         self.w = np.concatenate((w, w))
         self.w_center = np.concatenate((w_center, w_center))
         self.r_to_x = np.ones(self.n_part, dtype=np.int32)
-        self.tag = np.concatenate((tag, tag))
+        self.id = np.concatenate((id, id))
 
         # Create history arrays.
         if self.store_history:
@@ -176,7 +176,7 @@ class PlasmaParticles:
             self.pz_hist = np.zeros((self.nz, self.n_part))
             self.w_hist = np.zeros((self.nz, self.n_part))
             self.r_to_x_hist = np.zeros((self.nz, self.n_part), dtype=np.int32)
-            self.tag_hist = np.zeros((self.nz, self.n_part), dtype=np.int32)
+            self.id_hist = np.zeros((self.nz, self.n_part), dtype=np.int32)
             self.sum_1_hist = np.zeros((self.nz, self.n_part + 2))
             self.sum_2_hist = np.zeros((self.nz, self.n_part + 2))
             self.a_i_hist = np.zeros((self.nz, self.n_elec))
@@ -212,7 +212,7 @@ class PlasmaParticles:
             self.w_elec,
             self.w_center_elec,
             self.r_to_x_elec,
-            self.tag_elec,
+            self.id_elec,
             self._dr_e,
             self._dpr_e,
             i_sort_e,
@@ -228,7 +228,7 @@ class PlasmaParticles:
                 self.w_ion,
                 self.w_center_ion,
                 self.r_to_x_ion,
-                self.tag_ion,
+                self.id_ion,
                 self._dr_i,
                 self._dpr_i,
                 i_sort_i,
@@ -503,7 +503,7 @@ class PlasmaParticles:
                 "pz_hist": self.pz_hist,
                 "w_hist": self.w_hist,
                 "r_to_x_hist": self.r_to_x_hist,
-                "tag_hist": self.tag_hist,
+                "id_hist": self.id_hist,
                 "sum_1_hist": self.sum_1_hist,
                 "sum_2_hist": self.sum_2_hist,
                 "a_i_hist": self.a_i_hist,
@@ -526,8 +526,8 @@ class PlasmaParticles:
             self.w_hist[-1 - self.i_push] = self._rho
         if "r_to_x" in self.diags:
             self.r_to_x_hist[-1 - self.i_push] = self.r_to_x
-        if "tag" in self.diags:
-            self.tag_hist[-1 - self.i_push] = self.tag
+        if "id" in self.diags:
+            self.id_hist[-1 - self.i_push] = self.id
         if self.store_history:
             self.a_0_hist[-1 - self.i_push] = self._a_0[0]
 
@@ -584,7 +584,7 @@ class PlasmaParticles:
         self.w_elec = self.w[:self.n_elec]
         self.w_center_elec = self.w_center[:self.n_elec]
         self.r_to_x_elec = self.r_to_x[:self.n_elec]
-        self.tag_elec = self.tag[:self.n_elec]
+        self.id_elec = self.id[:self.n_elec]
 
         self.r_ion = self.r[self.n_elec:]
         self.log_r_ion = self._log_r[self.n_elec:]
@@ -595,7 +595,7 @@ class PlasmaParticles:
         self.w_ion = self.w[self.n_elec:]
         self.w_center_ion = self.w_center[self.n_elec:]
         self.r_to_x_ion = self.r_to_x[self.n_elec:]
-        self.tag_ion = self.tag[self.n_elec:]
+        self.id_ion = self.id[self.n_elec:]
 
         self._psi_e = self._psi[:self.n_elec]
         self._dr_psi_e = self._dr_psi[:self.n_elec]
