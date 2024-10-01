@@ -11,6 +11,9 @@ from wake_t.physics_models.plasma_wakefields.qs_rz_baxevanis_ion.gather import g
 from wake_t.fields.gather import gather_fields
 
 
+TEST_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
 def test_adaptive_grid():
     """Test a plasma simulation using adaptive grids.
 
@@ -301,41 +304,41 @@ def test_adaptive_grids_evolution(create_test_data=False, plot=False):
     # Save arrays with the evolution of the radial size of the grids.
     if create_test_data:
         np.savetxt(
-            os.path.join("resources", "r_max_hist_driver_ag.txt"),
+            os.path.join(TEST_DIR, "resources", "r_max_hist_driver_ag.txt"),
             plasma_ag.wakefield.bunch_grids['driver']._r_max_hist
         )
         np.savetxt(
-            os.path.join("resources", "r_max_hist_witness_ag.txt"),
+            os.path.join(TEST_DIR, "resources", "r_max_hist_witness_ag.txt"),
             plasma_ag.wakefield.bunch_grids['witness']._r_max_hist
         )
         np.savetxt(
-            os.path.join("resources", "r_max_hist_driver_agl.txt"),
+            os.path.join(TEST_DIR, "resources", "r_max_hist_driver_agl.txt"),
             plasma_agl.wakefield.bunch_grids['driver']._r_max_hist
         )
         np.savetxt(
-            os.path.join("resources", "r_max_hist_witness_agl.txt"),
+            os.path.join(TEST_DIR, "resources", "r_max_hist_witness_agl.txt"),
             plasma_agl.wakefield.bunch_grids['witness']._r_max_hist
         )
 
     # Check that the radial evolution is as expected.
     np.testing.assert_allclose(
         plasma_ag.wakefield.bunch_grids['driver']._r_max_hist,
-        np.loadtxt(os.path.join("resources", "r_max_hist_driver_ag.txt")),
+        np.loadtxt(os.path.join(TEST_DIR, "resources", "r_max_hist_driver_ag.txt")),
         rtol=1e-12
     )
     np.testing.assert_allclose(
         plasma_ag.wakefield.bunch_grids['witness']._r_max_hist,
-        np.loadtxt(os.path.join("resources", "r_max_hist_witness_ag.txt")),
+        np.loadtxt(os.path.join(TEST_DIR, "resources", "r_max_hist_witness_ag.txt")),
         rtol=1e-12
     )
     np.testing.assert_allclose(
         plasma_agl.wakefield.bunch_grids['driver']._r_max_hist,
-        np.loadtxt(os.path.join("resources", "r_max_hist_driver_agl.txt")),
+        np.loadtxt(os.path.join(TEST_DIR, "resources", "r_max_hist_driver_agl.txt")),
         rtol=1e-12
     )
     np.testing.assert_allclose(
         plasma_agl.wakefield.bunch_grids['witness']._r_max_hist,
-        np.loadtxt(os.path.join("resources", "r_max_hist_witness_agl.txt")),
+        np.loadtxt(os.path.join(TEST_DIR, "resources", "r_max_hist_witness_agl.txt")),
         rtol=1e-12
     )
 
