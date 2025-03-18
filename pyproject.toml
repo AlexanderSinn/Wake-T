@@ -34,7 +34,6 @@ content-type = "text/markdown; charset=UTF-8"
 [project.optional-dependencies]
 test = [
     "pytest",
-    "flake8",
     "matplotlib",
     "openpmd-viewer",
 ]
@@ -49,6 +48,8 @@ find = {namespaces = false}
 [tool.setuptools.dynamic]
 version = {attr = "wake_t.__version__"}
 
-[tool.black]
-line-length = 79
-target-version = ['py39', 'py310', 'py311']
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+exclude = ["tutorials/**"]
