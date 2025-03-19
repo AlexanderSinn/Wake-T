@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [ master, dev ]
+    branches: [ dev ]
   pull_request:
-    branches: [ master, dev ]
+    branches: [ dev ]
 
 jobs:
   build:
@@ -25,4 +25,25 @@ jobs:
         pip install -e ".[test]"
     - name: Run unit tests
       run: |
-        python -m pytest tests/
+        python -m pytest
+    - name: Archive code coverage results
+      uses: actions/upload-artifact@v4
+      with:
+        name: code-coverage-report-${{ matrix.python-version }}
+        path: coverage.xml
+
+  codacy-coverage-reporter:
+    needs: build
+    runs-on: ubuntu-latest
+    name: codacy-coverage-reporter
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download code coverage results
+        uses: actions/download-artifact@v4
+        with:
+          name: code-coverage-report-3.12
+      - name: Run codacy-coverage-reporter
+        uses: codacy/codacy-coverage-reporter-action@v1.3.0
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: coverage.xml
