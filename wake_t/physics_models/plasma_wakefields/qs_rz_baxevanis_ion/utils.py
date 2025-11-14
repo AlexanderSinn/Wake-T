@@ -196,32 +196,3 @@ def sort_particle_arrays(serialized_list, indices):
             s.id[i] = a9_orig[i_sort]
             s.dr[:, i] = a10_orig[:, i_sort]
             s.dpr[:, i] = a11_orig[:, i_sort]
-
-@njit_serial()
-def sort_particle_arrays_old(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, indices):
-    a1_orig = np.copy(a1)
-    a2_orig = np.copy(a2)
-    a3_orig = np.copy(a3)
-    a4_orig = np.copy(a4)
-    a5_orig = np.copy(a5)
-    a6_orig = np.copy(a6)
-    a7_orig = np.copy(a7)
-    a8_orig = np.copy(a8)
-    a9_orig = np.copy(a9)
-    a10_orig = np.copy(a10)
-    a11_orig = np.copy(a11)
-    n_part = indices.shape[0]
-    for i in range(n_part):
-        i_sort = indices[i]
-        if i != i_sort:
-            a1[i] = a1_orig[i_sort]
-            a2[i] = a2_orig[i_sort]
-            a3[i] = a3_orig[i_sort]
-            a4[i] = a4_orig[i_sort]
-            a5[i] = a5_orig[i_sort]
-            a6[i] = a6_orig[i_sort]
-            a7[i] = a7_orig[i_sort]
-            a8[i] = a8_orig[i_sort]
-            a9[i] = a9_orig[i_sort]
-            a10[:, i] = a10_orig[:, i_sort]
-            a11[:, i] = a11_orig[:, i_sort]

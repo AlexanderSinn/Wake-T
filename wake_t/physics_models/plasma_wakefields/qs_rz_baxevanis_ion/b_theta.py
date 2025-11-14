@@ -9,63 +9,6 @@ from wake_t.utilities.numba import njit_serial
 from .plasma_particle_container import PlasmaParticleContainer
 
 @njit_serial()
-def calculate_b_theta_at_particles_old(
-    r_e,
-    pr_e,
-    w_e,
-    w_center_e,
-    gamma_e,
-    q_e,
-    r_i,
-    ion_motion,
-    psi_e,
-    dr_psi_e,
-    dxi_psi_e,
-    b_t_0_e,
-    nabla_a2_e,
-    A,
-    B,
-    C,
-    K,
-    U,
-    a_0,
-    a,
-    b,
-    b_t_e,
-    b_t_i,
-):
-    # Only the magnetic field from the electrons is computed, so the equations
-    # below assume that q_i/m_i = 1.
-
-    # Calculate the A_i, B_i, C_i coefficients in Eq. (26).
-    calculate_ABC(
-        r_e,
-        pr_e,
-        gamma_e,
-        psi_e,
-        dr_psi_e,
-        dxi_psi_e,
-        b_t_0_e,
-        nabla_a2_e,
-        A,
-        B,
-        C,
-    )
-
-    # Calculate the a_i, b_i coefficients in Eq. (27).
-    calculate_KU(r_e, q_e, w_e, w_center_e, A, K, U)
-    calculate_ai_bi_from_axis(r_e, q_e, w_e, w_center_e, A, B, C, K, U, a_0, a, b)
-
-    # Calculate b_theta at plasma particles.
-    calculate_b_theta_at_particle_centers(a, b, r_e, b_t_e)
-    check_b_theta(b_t_e)
-    if ion_motion:
-        calculate_b_theta_with_interpolation(r_i, a_0[0], a, b, r_e, b_t_i)
-        check_b_theta(b_t_i)
-
-
-
-@njit_serial()
 def calculate_b_theta_at_particles(
     list_of_serialized_species
 ):

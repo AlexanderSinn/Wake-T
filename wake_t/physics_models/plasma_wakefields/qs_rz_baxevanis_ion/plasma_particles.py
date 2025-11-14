@@ -7,14 +7,12 @@ import scipy.constants as ct
 
 from .psi_and_derivatives import (
     calculate_psi_with_interpolation,
-    calculate_psi_and_derivatives_at_particles,
-    calculate_psi_and_derivatives_at_particles_old
+    calculate_psi_and_derivatives_at_particles
 )
 from .deposition import deposit_plasma_particles
 from .gather import gather_bunch_sources, gather_laser_sources
 from .b_theta import (
     calculate_b_theta_at_particles,
-    calculate_b_theta_at_particles_old,
     calculate_b_theta_with_interpolation,
 )
 from .plasma_push.ab2 import evolve_plasma_ab2
@@ -23,7 +21,6 @@ from .utils import (
     calculate_rho,
     update_gamma_and_pz,
     sort_particle_arrays,
-    sort_particle_arrays_old,
     check_gamma,
     log,
 )
@@ -235,43 +232,10 @@ class PlasmaParticles:
         The `q_species` and `m` arrays do not need to be sorted because all
         particles have the same value.
         """
-        # for s in self.species_list:
-        #     if s.do_push:
-        #         indices = np.argsort(s.r, kind="stable")
-        #         sort_particle_arrays(s.serialize(), indices)
-
-        #         i_sort_e = np.argsort(self.r_elec, kind="stable")
-        i_sort_e = np.argsort(self.species_list[0].r, kind="stable")
-        sort_particle_arrays_old(
-            self.species_list[0].r,
-            self.species_list[0].dr_p,
-            self.species_list[0].pr,
-            self.species_list[0].pz,
-            self.species_list[0].gamma,
-            self.species_list[0].w,
-            self.species_list[0].w_center,
-            self.species_list[0].r_to_x,
-            self.species_list[0].id,
-            self.species_list[0].dr,
-            self.species_list[0].dpr,
-            i_sort_e,
-        )
-        if self.ion_motion:
-            i_sort_i = np.argsort(self.species_list[1].r, kind="stable")
-            sort_particle_arrays_old(
-                self.species_list[1].r,
-                self.species_list[1].dr_p,
-                self.species_list[1].pr,
-                self.species_list[1].pz,
-                self.species_list[1].gamma,
-                self.species_list[1].w,
-                self.species_list[1].w_center,
-                self.species_list[1].r_to_x,
-                self.species_list[1].id,
-                self.species_list[1].dr,
-                self.species_list[1].dpr,
-                i_sort_i,
-            )
+        for s in self.species_list:
+            if s.do_push:
+                indices = np.argsort(s.r, kind="stable")
+                sort_particle_arrays(s.serialize(), indices)
 
     def gather_laser_sources(self, a2, nabla_a2, r_min, r_max, dr):
         """Gather the source terms (a^2 and nabla(a)^2) from the laser."""
@@ -316,38 +280,9 @@ class PlasmaParticles:
             if s.do_push or not self.ions_computed:
                 log(s.r, s.log_r)
 
-        # calculate_psi_and_derivatives_at_particles(
-        #     list(s.serialize() for s in self.species_list),
-        #     self.ions_computed
-        # )
-
-        calculate_psi_and_derivatives_at_particles_old(
-            self.species_list[0].r,
-            self.species_list[0].log_r,
-            self.species_list[0].pr,
-            self.species_list[0].w,
-            self.species_list[0].w_center,
-            self.species_list[0].charge,
-            self.species_list[1].r,
-            self.species_list[1].log_r,
-            self.species_list[1].pr,
-            self.species_list[1].w,
-            self.species_list[1].w_center,
-            self.species_list[1].charge,
-            self.ion_motion,
-            self.ions_computed,
-            self.species_list[0].sum_1,
-            self.species_list[0].sum_2,
-            self.species_list[0].sum_3,
-            self.species_list[1].sum_1,
-            self.species_list[1].sum_2,
-            self.species_list[1].sum_3,
-            self.species_list[0].psi,
-            self.species_list[0].dr_psi,
-            self.species_list[0].dxi_psi,
-            self.species_list[1].psi,
-            self.species_list[1].dr_psi,
-            self.species_list[1].dxi_psi
+        calculate_psi_and_derivatives_at_particles(
+            tuple(s.serialize() for s in self.species_list),
+            self.ions_computed
         )
 
         for s in self.species_list:
@@ -363,34 +298,8 @@ class PlasmaParticles:
                 )
             if not s.is_ion:
                 check_gamma(s.gamma, s.pz, s.pr, self.max_gamma)
-        # calculate_b_theta_at_particles(
-        #     list(s.serialize() for s in self.species_list)
-        # )
-
-        calculate_b_theta_at_particles_old(
-            self.species_list[0].r,
-            self.species_list[0].pr,
-            self.species_list[0].w,
-            self.species_list[0].w_center,
-            self.species_list[0].gamma,
-            self.species_list[0].charge,
-            self.species_list[1].r,
-            self.ion_motion,
-            self.species_list[0].psi,
-            self.species_list[0].dr_psi,
-            self.species_list[0].dxi_psi,
-            self.species_list[0].b_t_0,
-            self.species_list[0].nabla_a2,
-            self.species_list[0].A,
-            self.species_list[0].B,
-            self.species_list[0].C,
-            self.species_list[0].K,
-            self.species_list[0].U,
-            self.species_list[0].a_0,
-            self.species_list[0].a_i,
-            self.species_list[0].b_i,
-            self.species_list[0].b_t,
-            self.species_list[1].b_t,
+        calculate_b_theta_at_particles(
+            tuple(s.serialize() for s in self.species_list)
         )
 
     def calculate_psi_at_grid(self, r_eval, psi):
