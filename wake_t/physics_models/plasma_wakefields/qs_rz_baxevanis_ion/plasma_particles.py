@@ -164,15 +164,15 @@ class PlasmaParticles:
             s.do_push = not s.is_ion or self.ion_motion
             s.store_history = self.store_history
 
-            s.r = r
-            s.dr_p = dr_p
-            s.pr = pr
-            s.pz = pz
-            s.gamma = gamma
-            s.w = w
-            s.w_center = w_center
+            s.r = np.copy(r)
+            s.dr_p = np.copy(dr_p)
+            s.pr = np.copy(pr)
+            s.pz = np.copy(pz)
+            s.gamma = np.copy(gamma)
+            s.w = np.copy(w)
+            s.w_center = np.copy(w_center)
             s.r_to_x = np.ones(s.num_particles, dtype=np.int32)
-            s.id = id
+            s.id = np.copy(id)
             if s.is_ion:
                 s.mass = float(self.ion_mass / ct.m_e)
                 s.charge = float(-self.free_electrons_per_ion)
