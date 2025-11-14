@@ -34,14 +34,15 @@ def calculate_psi_and_derivatives_at_particles(
     # r_neighbor_e. For the ions, compute the psi and dr_psi due to the
     # electrons at r_neighbor_i.
     for idx1, s1 in enumerate(species_list):
-        for idx2, s2 in enumerate(species_list):
-            if idx1 != idx2 and s1.do_push:
-                calculate_psi_and_dr_psi_at_particle_centers(
-                    s1.r, s1.log_r, s1.sum_1, s1.sum_2, s1.psi, s1.dr_psi
-                )
-                calculate_psi_and_dr_psi_with_interpolation(
-                    s1.r, s2.r, s2.log_r, s2.sum_1, s2.sum_2, s1.psi, s1.dr_psi, add=True
-                )
+        if s1.do_push:
+            calculate_psi_and_dr_psi_at_particle_centers(
+                s1.r, s1.log_r, s1.sum_1, s1.sum_2, s1.psi, s1.dr_psi
+            )
+            for idx2, s2 in enumerate(species_list):
+                if idx1 != idx2 and s1.do_push:
+                    calculate_psi_and_dr_psi_with_interpolation(
+                        s1.r, s2.r, s2.log_r, s2.sum_1, s2.sum_2, s1.psi, s1.dr_psi, add=True
+                    )
 
     # Check that the values of psi are within a reasonable range (prevents
     # issues at the peak of a blowout wake, for example).
@@ -59,10 +60,10 @@ def calculate_psi_and_derivatives_at_particles(
     # r_neighbor_e. For the ions, compute the psi and dr_psi due to the
     # electrons at r_neighbor_i.
     for idx1, s1 in enumerate(species_list):
-        for idx2, s2 in enumerate(species_list):
-            if idx1 != idx2 and s1.do_push:
-                calculate_dxi_psi_at_particle_centers(s1.r, s1.sum_3, s1.dxi_psi)
-                if s1.do_push:
+        if s1.do_push:
+            calculate_dxi_psi_at_particle_centers(s1.r, s1.sum_3, s1.dxi_psi)
+            for idx2, s2 in enumerate(species_list):
+                if idx1 != idx2 and s2.do_push:
                     calculate_dxi_psi_with_interpolation(s1.r, s2.r, s2.sum_3, s1.dxi_psi, add=True)
 
     # Check that the values of dxi_psi are within a reasonable range (prevents

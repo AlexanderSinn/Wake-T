@@ -144,8 +144,6 @@ class PlasmaParticles:
 
         # Determine number of particles.
         num_per_species = r.shape[0]
-        self.n_elec = num_per_species
-        self.n_part = self.n_elec * 2
 
         # Initialize particle arrays.
         # `q_center` represents the charge until the particle center. That is,
@@ -188,8 +186,8 @@ class PlasmaParticles:
                 s.w_hist = np.zeros((self.nz, s.num_particles))
                 s.r_to_x_hist = np.zeros((self.nz, s.num_particles), dtype=np.int32)
                 s.id_hist = np.zeros((self.nz, s.num_particles), dtype=np.int32)
-                s.sum_1_hist = np.zeros((self.nz, s.num_particles + 2))
-                s.sum_2_hist = np.zeros((self.nz, s.num_particles + 2))
+                s.sum_1_hist = np.zeros((self.nz, s.num_particles + 1))
+                s.sum_2_hist = np.zeros((self.nz, s.num_particles + 1))
                 if not s.is_ion:
                     s.a_i_hist = np.zeros((self.nz, s.num_particles))
                     s.b_i_hist = np.zeros((self.nz, s.num_particles))
@@ -236,17 +234,6 @@ class PlasmaParticles:
         """
         for s in self.species_list:
             if s.do_push:
-                # for t in s.serialize():
-                #     if isinstance(t, np.ndarray):
-                #         print(t.dtype, t.shape)
-                #     else:
-                #         print(type(t))
-                # print("Aagain:")
-                # for t in PlasmaParticleContainerPy(s.serialize()).serialize():
-                #     if isinstance(t, np.ndarray):
-                #         print(t.dtype, t.shape)
-                #     else:
-                #         print(type(t))
                 indices = np.argsort(s.r, kind="stable")
                 sort_particle_arrays(s.serialize(), indices)
 
@@ -269,6 +256,8 @@ class PlasmaParticles:
         self, source_arrays, source_xi_indices, source_metadata, slice_i
     ):
         """Gather the source terms (b_theta) from the particle bunches."""
+        for s in self.species_list:
+            s.b_t_0[:] = 0.0
         for i in range(len(source_arrays)):
             array = source_arrays[i]
             idx = source_xi_indices[i]
@@ -279,7 +268,6 @@ class PlasmaParticles:
             if slice_i in idx:
                 xi_index = slice_i + 2 - idx[0]
                 for s in self.species_list:
-                    s.b_t_0[:] = 0.0
                     if s.do_push:
                         gather_bunch_sources(
                             array[xi_index], r_min, r_max, dr, s.r, s.b_t_0
@@ -293,7 +281,7 @@ class PlasmaParticles:
                 log(s.r, s.log_r)
 
         calculate_psi_and_derivatives_at_particles(
-            [s.serialize() for s in self.species_list],
+            list(s.serialize() for s in self.species_list),
             self.ions_computed
         )
 
@@ -311,7 +299,7 @@ class PlasmaParticles:
             if not s.is_ion:
                 check_gamma(s.gamma, s.pz, s.pr, self.max_gamma)
         calculate_b_theta_at_particles(
-            [s.serialize() for s in self.species_list]
+            list(s.serialize() for s in self.species_list)
         )
 
     def calculate_psi_at_grid(self, r_eval, psi):
@@ -493,8 +481,8 @@ class PlasmaParticles:
                 else:
                     s.a_i = np.zeros((0))
                     s.b_i = np.zeros((0))
-                s.sum_1 = np.zeros(s.num_particles + 2)
-                s.sum_2 = np.zeros(s.num_particles + 2)
+                s.sum_1 = np.zeros(s.num_particles + 1)
+                s.sum_2 = np.zeros(s.num_particles + 1)
                 s.rho = np.zeros(s.num_particles)
                 s.log_r = np.zeros(s.num_particles)
 
