@@ -193,24 +193,24 @@ class PlasmaParticles:
                     s.b_i_hist = np.zeros((self.nz, s.num_particles))
                     s.a_0_hist = np.zeros(self.nz)
                 else:
-                    s.a_i_hist = np.zeros((0, 0))
-                    s.b_i_hist = np.zeros((0, 0))
+                    s.a_i_hist = np.zeros((self.nz, 0))
+                    s.b_i_hist = np.zeros((self.nz, 0))
                     s.a_0_hist = np.zeros(0)
                 s.i_push = 0
                 s.xi_current = 0.0
             else:
-                s.r_hist = np.zeros((0, 0))
-                s.log_r_hist = np.zeros((0, 0))
-                s.xi_hist = np.zeros((0, 0))
-                s.pr_hist = np.zeros((0, 0))
-                s.pz_hist = np.zeros((0, 0))
-                s.w_hist = np.zeros((0, 0))
-                s.r_to_x_hist = np.zeros((0, 0), dtype=np.int32)
-                s.id_hist = np.zeros((0, 0), dtype=np.int32)
-                s.sum_1_hist = np.zeros((0, 0))
-                s.sum_2_hist = np.zeros((0, 0))
-                s.a_i_hist = np.zeros((0, 0))
-                s.b_i_hist = np.zeros((0, 0))
+                s.r_hist = np.zeros((self.nz, 0))
+                s.log_r_hist = np.zeros((self.nz, 0))
+                s.xi_hist = np.zeros((self.nz, 0))
+                s.pr_hist = np.zeros((self.nz, 0))
+                s.pz_hist = np.zeros((self.nz, 0))
+                s.w_hist = np.zeros((self.nz, 0))
+                s.r_to_x_hist = np.zeros((self.nz, 0), dtype=np.int32)
+                s.id_hist = np.zeros((self.nz, 0), dtype=np.int32)
+                s.sum_1_hist = np.zeros((self.nz, 0))
+                s.sum_2_hist = np.zeros((self.nz, 0))
+                s.a_i_hist = np.zeros((self.nz, 0))
+                s.b_i_hist = np.zeros((self.nz, 0))
                 s.a_0_hist = np.zeros((0))
                 s.i_push = 0
                 s.xi_current = 0.0
@@ -418,18 +418,18 @@ class PlasmaParticles:
         if self.store_history:
             # TODO: return a per-species hisory
             history = {
-                "r_hist": np.concatenate(list(s.r_hist for s in self.species_list)),
-                "log_r_hist": np.concatenate(list(s.log_r_hist for s in self.species_list)),
-                "xi_hist": np.concatenate(list(s.xi_hist for s in self.species_list)),
-                "pr_hist": np.concatenate(list(s.pr_hist for s in self.species_list)),
-                "pz_hist": np.concatenate(list(s.pz_hist for s in self.species_list)),
-                "w_hist": np.concatenate(list(s.w_hist for s in self.species_list)),
-                "r_to_x_hist": np.concatenate(list(s.r_to_x_hist for s in self.species_list)),
-                "id_hist": np.concatenate(list(s.id_hist for s in self.species_list)),
-                "sum_1_hist": np.concatenate(list(s.sum_1_hist for s in self.species_list)),
-                "sum_2_hist": np.concatenate(list(s.sum_2_hist for s in self.species_list)),
-                "a_i_hist": np.concatenate(list(s.a_i_hist for s in self.species_list if not s.is_ion)),
-                "b_i_hist": np.concatenate(list(s.b_i_hist for s in self.species_list if not s.is_ion)),
+                "r_hist": np.concatenate(list(s.r_hist for s in self.species_list), axis=1),
+                "log_r_hist": np.concatenate(list(s.log_r_hist for s in self.species_list), axis=1),
+                "xi_hist": np.concatenate(list(s.xi_hist for s in self.species_list), axis=1),
+                "pr_hist": np.concatenate(list(s.pr_hist for s in self.species_list), axis=1),
+                "pz_hist": np.concatenate(list(s.pz_hist for s in self.species_list), axis=1),
+                "w_hist": np.concatenate(list(s.w_hist for s in self.species_list), axis=1),
+                "r_to_x_hist": np.concatenate(list(s.r_to_x_hist for s in self.species_list), axis=1),
+                "id_hist": np.concatenate(list(s.id_hist for s in self.species_list), axis=1),
+                "sum_1_hist": np.concatenate(list(s.sum_1_hist for s in self.species_list), axis=1),
+                "sum_2_hist": np.concatenate(list(s.sum_2_hist for s in self.species_list), axis=1),
+                "a_i_hist": np.concatenate(list(s.a_i_hist for s in self.species_list if not s.is_ion), axis=1),
+                "b_i_hist": np.concatenate(list(s.b_i_hist for s in self.species_list if not s.is_ion), axis=1),
                 "a_0_hist": np.concatenate(list(s.a_0_hist for s in self.species_list if not s.is_ion)),
             }
             return history
