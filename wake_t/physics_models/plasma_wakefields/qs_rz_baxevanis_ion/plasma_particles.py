@@ -71,7 +71,7 @@ def pp_initialize(
     pr = np.zeros(num_per_species)
     pz = np.zeros(num_per_species)
     gamma = np.ones(num_per_species)
-    id = np.arange(num_per_species, dtype=np.int32)
+    idd = np.arange(num_per_species, dtype=np.int32)
     w = dr_p * r * radial_density(r)
     w_center = w / 2 - dr_p**2 / 8
 
@@ -90,7 +90,7 @@ def pp_initialize(
         s.w = np.copy(w)
         s.w_center = np.copy(w_center)
         s.r_to_x = np.ones(s.num_particles, dtype=np.int32)
-        s.id = np.copy(id)
+        s.id = np.copy(idd)
         # Charge and mass of the macroparticles of each species.
         if s.is_ion:
             s.mass = float(ion_mass / ct.m_e)

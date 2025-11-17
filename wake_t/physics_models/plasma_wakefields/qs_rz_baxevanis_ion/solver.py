@@ -9,7 +9,6 @@ for the full details about this model.
 import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
-import time
 
 from .plasma_particles import (
     pp_initialize,
@@ -241,6 +240,9 @@ def calculate_wakefields(
     laser_source = laser_a2 is not None
     if laser_source:
         radial_gradient(laser_a2[2:-2, 2:-2], dr, nabla_a2[2:-2, 2:-2])
+    else:
+        laser_a2 = np.zeros((0, 0))
+        nabla_a2 = np.zeros((0, 0))
 
     # Calculate plasma response (including density, susceptibility, potential
     # and magnetic field)

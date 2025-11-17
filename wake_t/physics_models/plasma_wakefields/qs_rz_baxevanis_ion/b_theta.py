@@ -6,8 +6,6 @@ according to the paper by P. Baxevanis and G. Stupakov.
 
 from wake_t.utilities.numba import njit_serial
 
-from .plasma_particle_container import PlasmaParticleContainer
-
 @njit_serial()
 def calculate_b_theta_at_particles(
     species_list

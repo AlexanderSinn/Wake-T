@@ -8,8 +8,6 @@ import numpy as np
 
 from wake_t.utilities.numba import njit_serial
 
-from .plasma_particle_container import PlasmaParticleContainer
-
 @njit_serial(fastmath=True, error_model="numpy")
 def calculate_psi_and_derivatives_at_particles(
     species_list,

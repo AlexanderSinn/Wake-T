@@ -6,8 +6,6 @@ import numpy as np
 
 from wake_t.utilities.numba import njit_serial
 
-from .plasma_particle_container import PlasmaParticleContainer
-
 
 @njit_serial(fastmath=True)
 def log(input, output):
