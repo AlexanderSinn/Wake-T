@@ -60,6 +60,8 @@ def calculate_b_theta_at_particles(
 
     Parameters
     ----------
+    list_of_serialized_species: tuple(serialized PlasmaParticleContainer)
+        Data for all plasma species.
     """
     species_list = [PlasmaParticleContainer(l) for l in list_of_serialized_species]
 

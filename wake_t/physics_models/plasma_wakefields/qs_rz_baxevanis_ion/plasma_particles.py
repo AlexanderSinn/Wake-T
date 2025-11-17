@@ -161,6 +161,7 @@ class PlasmaParticles:
             s.do_push = not s.is_ion or self.ion_motion
             s.store_history = self.store_history
 
+            # Make copy to avoid multiple species sharing the same array
             s.r = np.copy(r)
             s.dr_p = np.copy(dr_p)
             s.pr = np.copy(pr)
@@ -170,6 +171,7 @@ class PlasmaParticles:
             s.w_center = np.copy(w_center)
             s.r_to_x = np.ones(s.num_particles, dtype=np.int32)
             s.id = np.copy(id)
+            # Charge and mass of the macroparticles of each species.
             if s.is_ion:
                 s.mass = float(self.ion_mass / ct.m_e)
                 s.charge = float(-self.free_electrons_per_ion)
@@ -177,6 +179,7 @@ class PlasmaParticles:
                 s.mass = float(self.free_electrons_per_ion)
                 s.charge = float(self.free_electrons_per_ion)
 
+            # Create history arrays.
             if s.store_history:
                 s.r_hist = np.zeros((self.nz, s.num_particles))
                 s.log_r_hist = np.zeros((self.nz, s.num_particles))

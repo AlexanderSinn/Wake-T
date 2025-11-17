@@ -43,6 +43,22 @@ def deposit_plasma_particles(r, w, r_min, nr, dr, deposition_array, p_shape="cub
 
 @njit_serial(fastmath=True, error_model="numpy")
 def deposit_plasma_finish(r_min, nr, dr, deposition_array):
+    """
+    Needs to be called after deposit_plasma_particles to divide by r*dr.
+
+    Parameters
+    ----------
+    r_min : float
+        Position of the first field value along r.
+    nr : int
+        Number of grid cells (excluding guard cells) along the radial
+        direction.
+    dr : float
+        Grid step size along the radial direction.
+    deposition_array : array
+        The 2D array of size nr+4 (including two guard cells at each
+        boundary) into which the weight will be deposited.
+    """
     for i in range(nr):
         deposition_array[i + 2] /= (r_min + i * dr) * dr
 
