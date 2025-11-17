@@ -412,26 +412,27 @@ class PlasmaParticles:
 
         Returns
         -------
-        dict
-            A dictionary containing the particle history arrays.
+        list[dict]
+            A dictionary containing the particle history arrays for each plasma species.
         """
         if self.store_history:
-            # TODO: return a per-species hisory
-            history = {
-                "r_hist": np.concatenate(list(s.r_hist for s in self.species_list), axis=1),
-                "log_r_hist": np.concatenate(list(s.log_r_hist for s in self.species_list), axis=1),
-                "xi_hist": np.concatenate(list(s.xi_hist for s in self.species_list), axis=1),
-                "pr_hist": np.concatenate(list(s.pr_hist for s in self.species_list), axis=1),
-                "pz_hist": np.concatenate(list(s.pz_hist for s in self.species_list), axis=1),
-                "w_hist": np.concatenate(list(s.w_hist for s in self.species_list), axis=1),
-                "r_to_x_hist": np.concatenate(list(s.r_to_x_hist for s in self.species_list), axis=1),
-                "id_hist": np.concatenate(list(s.id_hist for s in self.species_list), axis=1),
-                "sum_1_hist": np.concatenate(list(s.sum_1_hist for s in self.species_list), axis=1),
-                "sum_2_hist": np.concatenate(list(s.sum_2_hist for s in self.species_list), axis=1),
-                "a_i_hist": np.concatenate(list(s.a_i_hist for s in self.species_list if not s.is_ion), axis=1),
-                "b_i_hist": np.concatenate(list(s.b_i_hist for s in self.species_list if not s.is_ion), axis=1),
-                "a_0_hist": np.concatenate(list(s.a_0_hist for s in self.species_list if not s.is_ion)),
-            }
+            history = list()
+            for s in self.species_list:
+                history.append({
+                    "r_hist": s.r_hist,
+                    "log_r_hist": s.log_r_hist,
+                    "xi_hist": s.xi_hist,
+                    "pr_hist": s.pr_hist,
+                    "pz_hist": s.pz_hist,
+                    "w_hist": s.w_hist,
+                    "r_to_x_hist": s.r_to_x_hist,
+                    "id_hist": s.id_hist,
+                    "sum_1_hist": s.sum_1_hist,
+                    "sum_2_hist": s.sum_2_hist,
+                    "a_i_hist": s.a_i_hist,
+                    "b_i_hist": s.b_i_hist,
+                    "a_0_hist": s.a_0_hist
+                })
             return history
 
     def store_current_step(self):
