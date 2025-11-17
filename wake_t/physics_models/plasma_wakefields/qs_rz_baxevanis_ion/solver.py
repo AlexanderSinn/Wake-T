@@ -43,9 +43,10 @@ def evolve_one_step(
     dxi,
     dr,
     r_fld,
-    laser_source,
+    has_laser_source,
     laser_a2,
     nabla_a2,
+    has_beam_source,
     bunch_source_arrays,
     bunch_source_xi_indices,
     bunch_source_metadata,
@@ -72,7 +73,7 @@ def evolve_one_step(
         slice_i = n_xi - step - 1
         pp_sort(pp_species_list)
 
-        if laser_source:
+        if has_laser_source:
             pp_gather_laser_sources(
                 pp_species_list,
                 laser_a2[slice_i + 2],
@@ -81,13 +82,14 @@ def evolve_one_step(
                 r_fld[-1],
                 dr,
             )
-        pp_gather_bunch_sources(
-            pp_species_list,
-            bunch_source_arrays,
-            bunch_source_xi_indices,
-            bunch_source_metadata,
-            slice_i,
-        )
+        if has_beam_source:
+            pp_gather_bunch_sources(
+                pp_species_list,
+                bunch_source_arrays,
+                bunch_source_xi_indices,
+                bunch_source_metadata,
+                slice_i,
+            )
 
         pp_calculate_fields(pp_species_list, ions_computed, max_gamma)
 
@@ -109,7 +111,7 @@ def evolve_one_step(
             )
         elif "w" in particle_diags:
             pp_calculate_weights(pp_species_list, ions_computed)
-        if laser_source:
+        if has_laser_source:
             pp_deposit_chi(pp_species_list, shape, chi[slice_i + 2], r_fld, n_r, dr)
 
         ions_computed = True
@@ -243,12 +245,24 @@ def calculate_wakefields(
     psi = np.zeros((n_xi + 4, n_r + 4))
 
     # Laser source.
-    laser_source = laser_a2 is not None
-    if laser_source:
+    has_laser_source = laser_a2 is not None
+    if has_laser_source:
         radial_gradient(laser_a2[2:-2, 2:-2], dr, nabla_a2[2:-2, 2:-2])
     else:
+        # need to set the dtype for JIT
         laser_a2 = np.zeros((0, 0))
         nabla_a2 = np.zeros((0, 0))
+
+    has_beam_source = len(bunch_source_arrays) > 0
+    if not has_beam_source:
+        # need to set the dtype for JIT
+        bunch_source_arrays.append(np.zeros((0, 0)))
+        bunch_source_xi_indices.append(np.zeros(0, dtype=np.int64))
+        bunch_source_metadata.append(np.zeros(0))
+
+    if len(particle_diags) == 0:
+        # need to set the type for JIT
+        particle_diags = ["none"]
 
     # Calculate plasma response (including density, susceptibility, potential
     # and magnetic field)
@@ -272,9 +286,6 @@ def calculate_wakefields(
         plasma_pusher,
     )
 
-    if len(particle_diags) == 0:
-        particle_diags = ["none"]
-
     evolve_one_step(
         tuple(s.serialize() for s in species_list),
         n_xi,
@@ -282,9 +293,10 @@ def calculate_wakefields(
         dxi,
         dr,
         r_fld,
-        laser_source,
+        has_laser_source,
         laser_a2,
         nabla_a2,
+        has_beam_source,
         bunch_source_arrays,
         bunch_source_xi_indices,
         bunch_source_metadata,
