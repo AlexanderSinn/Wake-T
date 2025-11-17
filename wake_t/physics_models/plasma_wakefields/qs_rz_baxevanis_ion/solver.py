@@ -62,7 +62,7 @@ def evolve_one_step(
     particle_diags,
 ):
     ions_computed = False
-    pp_species_list = [PlasmaParticleContainer(l) for l in pp_serialized_list]
+    pp_species_list = [PlasmaParticleContainer(species) for species in pp_serialized_list]
 
     # Evolve plasma from right to left and calculate psi, b_t_bar, rho and
     # chi on a grid.

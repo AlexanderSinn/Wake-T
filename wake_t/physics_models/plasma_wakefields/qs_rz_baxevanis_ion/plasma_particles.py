@@ -1,7 +1,5 @@
 """Contains the definition of the `PlasmaParticles` class."""
 
-from typing import Optional, List, Callable
-
 import numpy as np
 import scipy.constants as ct
 
