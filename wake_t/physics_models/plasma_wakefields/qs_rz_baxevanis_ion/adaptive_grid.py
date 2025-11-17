@@ -370,7 +370,6 @@ def calculate_fields_on_grid(
     Compiling this method in numba avoids significant overhead.
     """
     n_points = i_grid.shape[0]
-    n_elec = int(r_hist.shape[-1] / 2)
     for i in range(n_points):
         j = i_grid[i]
         psi = psi_grid[i + 2, 2:-2]
