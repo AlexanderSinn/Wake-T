@@ -41,6 +41,10 @@ def deposit_plasma_particles(r, w, r_min, nr, dr, deposition_array, p_shape="cub
     elif p_shape == "cubic":
         return deposit_plasma_particles_cubic(r, w, r_min, nr, dr, deposition_array)
 
+@njit_serial(fastmath=True, error_model="numpy")
+def deposit_plasma_finish(r_min, nr, dr, deposition_array):
+    for i in range(nr):
+        deposition_array[i + 2] /= (r_min + i * dr) * dr
 
 @njit_serial(fastmath=True, error_model="numpy")
 def deposit_plasma_particles_linear(r, q, r_min, nr, dr, deposition_array):
@@ -77,9 +81,6 @@ def deposit_plasma_particles_linear(r, q, r_min, nr, dr, deposition_array):
         # plasma)
         deposition_array[2] -= deposition_array[1]
         deposition_array[1] = 0.0
-
-    for i in range(nr):
-        deposition_array[i + 2] /= (r_min + i * dr) * dr
 
 
 @njit_serial(fastmath=True, error_model="numpy")
@@ -127,6 +128,3 @@ def deposit_plasma_particles_cubic(r, q, r_min, nr, dr, deposition_array):
         deposition_array[3] -= deposition_array[0]
         deposition_array[0] = 0.0
         deposition_array[1] = 0.0
-
-    for i in range(nr):
-        deposition_array[i + 2] /= (r_min + i * dr) * dr

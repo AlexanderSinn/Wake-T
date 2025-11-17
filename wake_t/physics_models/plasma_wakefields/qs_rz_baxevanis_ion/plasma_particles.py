@@ -9,7 +9,7 @@ from .psi_and_derivatives import (
     calculate_psi_with_interpolation,
     calculate_psi_and_derivatives_at_particles
 )
-from .deposition import deposit_plasma_particles
+from .deposition import deposit_plasma_particles, deposit_plasma_finish
 from .gather import gather_bunch_sources, gather_laser_sources
 from .b_theta import (
     calculate_b_theta_at_particles,
@@ -380,15 +380,13 @@ class PlasmaParticles:
         self.calculate_weights()
         # Deposit electrons
         for s in self.species_list:
-            # TODO: fix add on second iteration
-            if s.is_ion:
-                deposit_plasma_particles(
-                    s.r, s.rho, r_fld[0], nr, dr, rho_i, self.shape
-                )
-            else:
-                deposit_plasma_particles(
-                    s.r, s.rho, r_fld[0], nr, dr, rho_e, self.shape
-                )
+            deposit_plasma_particles(
+                s.r, s.rho, r_fld[0], nr, dr,
+                rho_i if s.is_ion else rho_e,
+                self.shape
+            )
+        deposit_plasma_finish(r_fld[0], nr, dr, rho_e)
+        deposit_plasma_finish(r_fld[0], nr, dr, rho_i)
         rho[:] = rho_e
         rho += rho_i
 
@@ -406,6 +404,7 @@ class PlasmaParticles:
                 deposit_plasma_particles(
                     s.r, s.chi, r_fld[0], nr, dr, chi, self.shape
                 )
+        deposit_plasma_finish(r_fld[0], nr, dr, chi)
 
     def get_history(self):
         """Get the history of the evolution of the plasma particles.
