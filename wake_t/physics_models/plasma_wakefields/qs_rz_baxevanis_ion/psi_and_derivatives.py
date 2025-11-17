@@ -8,11 +8,9 @@ import numpy as np
 
 from wake_t.utilities.numba import njit_serial
 
+
 @njit_serial(fastmath=True, error_model="numpy")
-def calculate_psi_and_derivatives_at_particles(
-    species_list,
-    ions_computed
-):
+def calculate_psi_and_derivatives_at_particles(species_list, ions_computed):
     """Calculate wakefield potential and derivatives at the plasma particles.
 
     Parameters
@@ -28,7 +26,6 @@ def calculate_psi_and_derivatives_at_particles(
             calculate_cumulative_sum_1(s.charge, s.w, s.w_center, s.sum_1)
             calculate_cumulative_sum_2(s.charge, s.log_r, s.w, s.w_center, s.sum_2)
 
-
     # Calculate the psi and dr_psi background at the neighboring points.
     # For the electrons, compute the psi and dr_psi due to the ions at
     # r_neighbor_e. For the ions, compute the psi and dr_psi due to the
@@ -41,7 +38,14 @@ def calculate_psi_and_derivatives_at_particles(
             for idx2, s2 in enumerate(species_list):
                 if idx1 != idx2 and s1.do_push:
                     calculate_psi_and_dr_psi_with_interpolation(
-                        s1.r, s2.r, s2.log_r, s2.sum_1, s2.sum_2, s1.psi, s1.dr_psi, add=True
+                        s1.r,
+                        s2.r,
+                        s2.log_r,
+                        s2.sum_1,
+                        s2.sum_2,
+                        s1.psi,
+                        s1.dr_psi,
+                        add=True,
                     )
 
     # Check that the values of psi are within a reasonable range (prevents
@@ -53,7 +57,9 @@ def calculate_psi_and_derivatives_at_particles(
     # Calculate cumulative sum 3 (Eq. (32)).
     for s in species_list:
         if s.do_push or not ions_computed:
-            calculate_cumulative_sum_3(s.charge, s.r, s.pr, s.w, s.w_center, s.psi, s.sum_3)
+            calculate_cumulative_sum_3(
+                s.charge, s.r, s.pr, s.w, s.w_center, s.psi, s.sum_3
+            )
 
     # Calculate the dxi_psi background at the neighboring points.
     # For the electrons, compute the psi and dr_psi due to the ions at
@@ -64,12 +70,15 @@ def calculate_psi_and_derivatives_at_particles(
             calculate_dxi_psi_at_particle_centers(s1.r, s1.sum_3, s1.dxi_psi)
             for idx2, s2 in enumerate(species_list):
                 if idx1 != idx2 and s2.do_push:
-                    calculate_dxi_psi_with_interpolation(s1.r, s2.r, s2.sum_3, s1.dxi_psi, add=True)
+                    calculate_dxi_psi_with_interpolation(
+                        s1.r, s2.r, s2.sum_3, s1.dxi_psi, add=True
+                    )
 
     # Check that the values of dxi_psi are within a reasonable range (prevents
     # issues at the peak of a blowout wake, for example).
     for s in species_list:
         check_psi_derivative(s.dxi_psi)
+
 
 @njit_serial(fastmath=True)
 def calculate_cumulative_sum_1(q, w, w_center, sum_1_arr):

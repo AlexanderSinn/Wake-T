@@ -579,7 +579,6 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         elec_name = "plasma_electrons"
         ions_name = "plasma_ions"
         if len(self.particle_diags) > 0:
-
             for name, hist in zip((elec_name, ions_name), self.pp):
                 s_d = ge.plasma_skin_depth(self.n_p * 1e-6)
 
@@ -602,12 +601,18 @@ class Quasistatic2DWakefieldIon(RZWakefield):
                     diag_dict[name]["z"] = hist["xi_hist"] * s_d + self.xi_max
                     diag_dict[name]["z_off"] = global_time * ct.c
                 if "pr" in self.particle_diags:
-                    diag_dict[name]["pr"] = hist["pr_hist"] * diag_dict[name]["mass"] * ct.c
+                    diag_dict[name]["pr"] = (
+                        hist["pr_hist"] * diag_dict[name]["mass"] * ct.c
+                    )
                 if "pz" in self.particle_diags:
-                    diag_dict[name]["pz"] = hist["pz_hist"] * diag_dict[name]["mass"] * ct.c
+                    diag_dict[name]["pz"] = (
+                        hist["pz_hist"] * diag_dict[name]["mass"] * ct.c
+                    )
                 if "w" in self.particle_diags:
                     diag_dict[name]["w"] = hist["w_hist"] * (
-                        self.n_p if name == elec_name else self.n_p / self.free_electrons_per_ion
+                        self.n_p
+                        if name == elec_name
+                        else self.n_p / self.free_electrons_per_ion
                     )
                 if "r_to_x" in self.particle_diags:
                     diag_dict[name]["r_to_x"] = hist["r_to_x_hist"]

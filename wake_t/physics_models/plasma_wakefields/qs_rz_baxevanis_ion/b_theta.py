@@ -6,10 +6,9 @@ according to the paper by P. Baxevanis and G. Stupakov.
 
 from wake_t.utilities.numba import njit_serial
 
+
 @njit_serial()
-def calculate_b_theta_at_particles(
-    species_list
-):
+def calculate_b_theta_at_particles(species_list):
     """Calculate the azimuthal magnetic field at the plasma particles.
 
     To simplify the algorithm, this method considers only the magnetic field
@@ -83,7 +82,18 @@ def calculate_b_theta_at_particles(
             # Calculate the a_i, b_i coefficients in Eq. (27).
             calculate_KU(s.r, s.charge, s.w, s.w_center, s.A, s.K, s.U)
             calculate_ai_bi_from_axis(
-                s.r, s.charge, s.w, s.w_center, s.A, s.B, s.C, s.K, s.U, s.a_0, s.a_i, s.b_i
+                s.r,
+                s.charge,
+                s.w,
+                s.w_center,
+                s.A,
+                s.B,
+                s.C,
+                s.K,
+                s.U,
+                s.a_0,
+                s.a_i,
+                s.b_i,
             )
             # Calculate b_theta at plasma particles.
             calculate_b_theta_at_particle_centers(s.a_i, s.b_i, s.r, s.b_t)
@@ -97,6 +107,7 @@ def calculate_b_theta_at_particles(
                     check_b_theta(s2.b_t)
 
             break
+
 
 @njit_serial(error_model="numpy")
 def calculate_b_theta_with_interpolation(r_fld, a_0, a, b, r, b_theta):

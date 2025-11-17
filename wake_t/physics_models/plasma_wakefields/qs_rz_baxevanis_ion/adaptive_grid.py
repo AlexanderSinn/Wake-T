@@ -162,7 +162,7 @@ class AdaptiveGrid:
             tuple(h["sum_2_hist"] for h in pp_hist),
             tuple(h["a_0_hist"] for h in pp_hist),
             tuple(h["a_i_hist"] for h in pp_hist),
-            tuple(h["b_i_hist"] for h in pp_hist)
+            tuple(h["b_i_hist"] for h in pp_hist),
         )
 
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p * 1e-6)
@@ -384,12 +384,12 @@ def calculate_fields_on_grid(
                 sum_1_arr=sum_1_hist[si][j],
                 sum_2_arr=sum_2_hist[si][j],
                 psi=psi,
-                add=add
+                add=add,
             )
             add = True
 
         for si in range(len(r_hist)):
-            if len(a_0_hist[si]) > 0: # test for electrons
+            if len(a_0_hist[si]) > 0:  # test for electrons
                 calculate_b_theta_with_interpolation(
                     r_fld=r_grid / s_d,
                     a_0=a_0_hist[si][j],

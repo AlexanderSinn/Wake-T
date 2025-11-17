@@ -7,7 +7,7 @@ import scipy.constants as ct
 
 from .psi_and_derivatives import (
     calculate_psi_with_interpolation,
-    calculate_psi_and_derivatives_at_particles
+    calculate_psi_and_derivatives_at_particles,
 )
 from .deposition import deposit_plasma_particles, deposit_plasma_finish
 from .gather import gather_bunch_sources, gather_laser_sources
@@ -27,18 +27,19 @@ from .utils import (
 
 from wake_t.utilities.numba import njit_serial
 
+
 def pp_initialize(
-        species_list,
-        nz,
-        ppc,
-        dr,
-        radial_density,
-        ion_motion,
-        store_history,
-        ion_mass,
-        free_electrons_per_ion,
-        pusher
-    ):
+    species_list,
+    nz,
+    ppc,
+    dr,
+    radial_density,
+    ion_motion,
+    store_history,
+    ion_mass,
+    free_electrons_per_ion,
+    pusher,
+):
     """Initialize column of plasma particles."""
 
     # Create radial distribution of plasma particles.
@@ -76,7 +77,6 @@ def pp_initialize(
     w_center = w / 2 - dr_p**2 / 8
 
     for s in species_list:
-
         s.num_particles = num_per_species
         s.do_push = not s.is_ion or ion_motion
         s.store_history = store_history
@@ -138,7 +138,6 @@ def pp_initialize(
             s.i_push = 0
             s.xi_current = 0.0
 
-
     # Allocate arrays that will contain the fields experienced by the
     # particles.
     _pp_allocate_field_arrays(species_list)
@@ -147,6 +146,7 @@ def pp_initialize(
     if pusher == "ab2":
         _pp_allocate_ab2_arrays(species_list)
 
+
 @njit_serial
 def pp_sort(species_list):
     for s in species_list:
@@ -154,21 +154,14 @@ def pp_sort(species_list):
             indices = np.argsort(s.r)
             sort_particle_arrays(s, indices)
 
+
 @njit_serial
 def pp_gather_laser_sources(species_list, a2, nabla_a2, r_min, r_max, dr):
     """Gather the source terms (a^2 and nabla(a)^2) from the laser."""
     for s in species_list:
         if s.do_push:
-            gather_laser_sources(
-                a2,
-                nabla_a2,
-                r_min,
-                r_max,
-                dr,
-                s.r,
-                s.a2,
-                s.nabla_a2
-            )
+            gather_laser_sources(a2, nabla_a2, r_min, r_max, dr, s.r, s.a2, s.nabla_a2)
+
 
 @njit_serial
 def pp_gather_bunch_sources(
@@ -192,6 +185,7 @@ def pp_gather_bunch_sources(
                         array[xi_index], r_min, r_max, dr, s.r, s.b_t_0
                     )
 
+
 @njit_serial
 def pp_calculate_fields(species_list, ions_computed, max_gamma):
     """Calculate the fields at the plasma particles."""
@@ -200,10 +194,7 @@ def pp_calculate_fields(species_list, ions_computed, max_gamma):
         if s.do_push or not ions_computed:
             log(s.r, s.log_r)
 
-    calculate_psi_and_derivatives_at_particles(
-        species_list,
-        ions_computed
-    )
+    calculate_psi_and_derivatives_at_particles(species_list, ions_computed)
 
     for s in species_list:
         if s.do_push:
@@ -218,9 +209,8 @@ def pp_calculate_fields(species_list, ions_computed, max_gamma):
             )
         if not s.is_ion:
             check_gamma(s.gamma, s.pz, s.pr, max_gamma)
-    calculate_b_theta_at_particles(
-        species_list
-    )
+    calculate_b_theta_at_particles(species_list)
+
 
 @njit_serial
 def pp_calculate_psi_at_grid(species_list, r_eval, psi):
@@ -228,15 +218,10 @@ def pp_calculate_psi_at_grid(species_list, r_eval, psi):
     add = False
     for s in species_list:
         calculate_psi_with_interpolation(
-            r_eval,
-            s.r,
-            s.log_r,
-            s.sum_1,
-            s.sum_2,
-            psi,
-            add
+            r_eval, s.r, s.log_r, s.sum_1, s.sum_2, psi, add
         )
         add = True
+
 
 @njit_serial
 def pp_calculate_b_theta_at_grid(species_list, r_eval, b_theta):
@@ -247,6 +232,7 @@ def pp_calculate_b_theta_at_grid(species_list, r_eval, b_theta):
                 r_eval, s.a_0[0], s.a_i, s.b_i, s.r, b_theta
             )
             return
+
 
 @njit_serial
 def pp_calculate_weights(species_list, ions_computed):
@@ -261,21 +247,23 @@ def pp_calculate_weights(species_list, ions_computed):
                 s.rho,
             )
 
+
 @njit_serial
-def pp_deposit_rho(species_list, ions_computed, shape, rho, rho_e, rho_i, r_fld, nr, dr):
+def pp_deposit_rho(
+    species_list, ions_computed, shape, rho, rho_e, rho_i, r_fld, nr, dr
+):
     """Deposit plasma density on a grid slice."""
     pp_calculate_weights(species_list, ions_computed)
     # Deposit electrons
     for s in species_list:
         deposit_plasma_particles(
-            s.r, s.rho, r_fld[0], nr, dr,
-            rho_i if s.is_ion else rho_e,
-            shape
+            s.r, s.rho, r_fld[0], nr, dr, rho_i if s.is_ion else rho_e, shape
         )
     deposit_plasma_finish(r_fld[0], nr, dr, rho_e)
     deposit_plasma_finish(r_fld[0], nr, dr, rho_i)
     rho[:] = rho_e
     rho += rho_i
+
 
 @njit_serial
 def pp_deposit_chi(species_list, shape, chi, r_fld, nr, dr):
@@ -289,10 +277,9 @@ def pp_deposit_chi(species_list, shape, chi, r_fld, nr, dr):
                 s.gamma,
                 s.chi,
             )
-            deposit_plasma_particles(
-                s.r, s.chi, r_fld[0], nr, dr, chi, shape
-            )
+            deposit_plasma_particles(s.r, s.chi, r_fld[0], nr, dr, chi, shape)
     deposit_plasma_finish(r_fld[0], nr, dr, chi)
+
 
 @njit_serial
 def pp_store_current_step(species_list, diags):
@@ -314,6 +301,7 @@ def pp_store_current_step(species_list, diags):
             s.id_hist[-1 - s.i_push] = s.id
         if s.store_history and not s.is_ion:
             s.a_0_hist[-1 - s.i_push] = s.a_0[0]
+
 
 @njit_serial
 def pp_evolve(species_list, dxi):
@@ -353,6 +341,7 @@ def pp_evolve(species_list, dxi):
                 s.sum_2[:] = s.sum_2_hist[-s.i_push, :]
                 s.log_r[:] = s.log_r_hist[-s.i_push, :]
 
+
 def pp_get_history(species_list, store_history):
     """Get the history of the evolution of the plasma particles.
 
@@ -364,22 +353,25 @@ def pp_get_history(species_list, store_history):
     if store_history:
         history = list()
         for s in species_list:
-            history.append({
-                "r_hist": s.r_hist,
-                "log_r_hist": s.log_r_hist,
-                "xi_hist": s.xi_hist,
-                "pr_hist": s.pr_hist,
-                "pz_hist": s.pz_hist,
-                "w_hist": s.w_hist,
-                "r_to_x_hist": s.r_to_x_hist,
-                "id_hist": s.id_hist,
-                "sum_1_hist": s.sum_1_hist,
-                "sum_2_hist": s.sum_2_hist,
-                "a_i_hist": s.a_i_hist,
-                "b_i_hist": s.b_i_hist,
-                "a_0_hist": s.a_0_hist
-            })
+            history.append(
+                {
+                    "r_hist": s.r_hist,
+                    "log_r_hist": s.log_r_hist,
+                    "xi_hist": s.xi_hist,
+                    "pr_hist": s.pr_hist,
+                    "pz_hist": s.pz_hist,
+                    "w_hist": s.w_hist,
+                    "r_to_x_hist": s.r_to_x_hist,
+                    "id_hist": s.id_hist,
+                    "sum_1_hist": s.sum_1_hist,
+                    "sum_2_hist": s.sum_2_hist,
+                    "a_i_hist": s.a_i_hist,
+                    "b_i_hist": s.b_i_hist,
+                    "a_0_hist": s.a_0_hist,
+                }
+            )
         return history
+
 
 def _pp_allocate_field_arrays(species_list):
     """Allocate arrays for the fields experienced by the particles.
@@ -437,6 +429,7 @@ def _pp_allocate_field_arrays(species_list):
             s.C = np.zeros(0)
             s.K = np.zeros(0)
             s.U = np.zeros(0)
+
 
 def _pp_allocate_ab2_arrays(species_list):
     """Allocate the arrays needed for the 2nd order Adams-Bashforth pusher.

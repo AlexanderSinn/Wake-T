@@ -23,13 +23,17 @@ from .plasma_particles import (
     pp_deposit_chi,
     pp_store_current_step,
     pp_evolve,
-    pp_get_history
+    pp_get_history,
 )
 from .utils import longitudinal_gradient, radial_gradient
 
 from wake_t.utilities.numba import njit_serial
 
-from .plasma_particle_container import PlasmaParticleContainer, PlasmaParticleContainerPy
+from .plasma_particle_container import (
+    PlasmaParticleContainer,
+    PlasmaParticleContainerPy,
+)
+
 
 @njit_serial
 def evolve_one_step(
@@ -55,7 +59,7 @@ def evolve_one_step(
     rho_i,
     chi,
     store_plasma_history,
-    particle_diags
+    particle_diags,
 ):
     ions_computed = False
     pp_species_list = [PlasmaParticleContainer(l) for l in pp_serialized_list]
@@ -248,10 +252,7 @@ def calculate_wakefields(
     # and magnetic field)
 
     # Initialize plasma particles.
-    species_list = [
-        PlasmaParticleContainerPy(),
-        PlasmaParticleContainerPy()
-    ]
+    species_list = [PlasmaParticleContainerPy(), PlasmaParticleContainerPy()]
 
     species_list[0].is_ion = False
     species_list[1].is_ion = True
@@ -266,7 +267,7 @@ def calculate_wakefields(
         store_plasma_history,
         ion_mass,
         free_electrons_per_ion,
-        plasma_pusher
+        plasma_pusher,
     )
 
     if len(particle_diags) == 0:
@@ -295,7 +296,7 @@ def calculate_wakefields(
         rho_i,
         chi,
         store_plasma_history,
-        particle_diags
+        particle_diags,
     )
 
     # Calculate derived fields (E_z, W_r, and E_r).
