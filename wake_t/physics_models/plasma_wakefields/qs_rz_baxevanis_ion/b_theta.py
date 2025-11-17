@@ -10,7 +10,7 @@ from .plasma_particle_container import PlasmaParticleContainer
 
 @njit_serial()
 def calculate_b_theta_at_particles(
-    list_of_serialized_species
+    species_list
 ):
     """Calculate the azimuthal magnetic field at the plasma particles.
 
@@ -60,11 +60,9 @@ def calculate_b_theta_at_particles(
 
     Parameters
     ----------
-    list_of_serialized_species: tuple(serialized PlasmaParticleContainer)
+    species_list: tuple(serialized PlasmaParticleContainer)
         Data for all plasma species.
     """
-    species_list = [PlasmaParticleContainer(l) for l in list_of_serialized_species]
-
     # Only the magnetic field from the electrons is computed, so the equations
     # below assume that q_i/m_i = 1.
 

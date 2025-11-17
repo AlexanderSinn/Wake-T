@@ -161,7 +161,7 @@ def check_gamma(gamma, pz, pr, max_gamma):
 
 
 @njit_serial()
-def sort_particle_arrays(serialized_list, indices):
+def sort_particle_arrays(s, indices):
     """Sort all the particle arrays with a given sorting order.
 
     Implementing it like this looks very ugly, but it is much faster than
@@ -169,8 +169,6 @@ def sort_particle_arrays(serialized_list, indices):
     than implementing a `sort_array` function that is called on each array.
     This is probably because of the overhead from calling numba functions.
     """
-    s = PlasmaParticleContainer(serialized_list)
-
     a1_orig = np.copy(s.r)
     a2_orig = np.copy(s.dr_p)
     a3_orig = np.copy(s.pr)

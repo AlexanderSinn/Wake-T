@@ -12,20 +12,18 @@ from .plasma_particle_container import PlasmaParticleContainer
 
 @njit_serial(fastmath=True, error_model="numpy")
 def calculate_psi_and_derivatives_at_particles(
-    list_of_serialized_species,
+    species_list,
     ions_computed
 ):
     """Calculate wakefield potential and derivatives at the plasma particles.
 
     Parameters
     ----------
-    list_of_serialized_species: tuple(serialized PlasmaParticleContainer)
+    species_list: tuple(serialized PlasmaParticleContainer)
         Data for all plasma species.
     ions_computed : bool
         Whether to skip the computation for non-moving ions.
     """
-    species_list = [PlasmaParticleContainer(l) for l in list_of_serialized_species]
-
     # Calculate cumulative sums 1 and 2 (Eqs. (29) and (31)).
     for s in species_list:
         if s.do_push or not ions_computed:

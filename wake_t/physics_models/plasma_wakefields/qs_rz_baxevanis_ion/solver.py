@@ -9,9 +9,111 @@ for the full details about this model.
 import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
+import time
 
-from .plasma_particles import PlasmaParticles
+from .plasma_particles import (
+    pp_initialize,
+    pp_sort,
+    pp_gather_laser_sources,
+    pp_gather_bunch_sources,
+    pp_calculate_fields,
+    pp_calculate_psi_at_grid,
+    pp_calculate_b_theta_at_grid,
+    pp_calculate_weights,
+    pp_deposit_rho,
+    pp_deposit_chi,
+    pp_store_current_step,
+    pp_evolve,
+    pp_get_history
+)
 from .utils import longitudinal_gradient, radial_gradient
+
+from wake_t.utilities.numba import njit_serial
+
+from .plasma_particle_container import PlasmaParticleContainer, PlasmaParticleContainerPy
+
+@njit_serial
+def evolve_one_step(
+    pp_serialized_list,
+    n_xi,
+    n_r,
+    dxi,
+    dr,
+    r_fld,
+    laser_source,
+    laser_a2,
+    nabla_a2,
+    bunch_source_arrays,
+    bunch_source_xi_indices,
+    bunch_source_metadata,
+    max_gamma,
+    psi,
+    B_t,
+    shape,
+    calculate_rho,
+    rho,
+    rho_e,
+    rho_i,
+    chi,
+    store_plasma_history,
+    particle_diags
+):
+    ions_computed = False
+    pp_species_list = [PlasmaParticleContainer(l) for l in pp_serialized_list]
+
+    # Evolve plasma from right to left and calculate psi, b_t_bar, rho and
+    # chi on a grid.
+    for step in range(n_xi):
+        slice_i = n_xi - step - 1
+        pp_sort(pp_species_list)
+
+        if laser_source:
+            pp_gather_laser_sources(
+                pp_species_list,
+                laser_a2[slice_i + 2],
+                nabla_a2[slice_i + 2],
+                r_fld[0],
+                r_fld[-1],
+                dr,
+            )
+        pp_gather_bunch_sources(
+            pp_species_list,
+            bunch_source_arrays,
+            bunch_source_xi_indices,
+            bunch_source_metadata,
+            slice_i,
+        )
+
+        pp_calculate_fields(pp_species_list, ions_computed, max_gamma)
+
+        pp_calculate_psi_at_grid(pp_species_list, r_fld, psi[slice_i + 2, 2:-2])
+
+        pp_calculate_b_theta_at_grid(pp_species_list, r_fld, B_t[slice_i + 2, 2:-2])
+
+        if calculate_rho:
+            pp_deposit_rho(
+                pp_species_list,
+                ions_computed,
+                shape,
+                rho[slice_i + 2],
+                rho_e[slice_i + 2],
+                rho_i[slice_i + 2],
+                r_fld,
+                n_r,
+                dr,
+            )
+        elif "w" in particle_diags:
+            pp_calculate_weights(pp_species_list, ions_computed)
+        if laser_source:
+            pp_deposit_chi(pp_species_list, shape, chi[slice_i + 2], r_fld, n_r, dr)
+
+        ions_computed = True
+
+        if store_plasma_history:
+            pp_store_current_step(pp_species_list, particle_diags)
+
+        if slice_i > 0:
+            pp_evolve(pp_species_list, dxi)
 
 
 def calculate_wakefields(
@@ -144,72 +246,55 @@ def calculate_wakefields(
     # and magnetic field)
 
     # Initialize plasma particles.
-    pp = PlasmaParticles(
-        r_max,
-        r_max_plasma,
-        dr,
-        ppc,
-        n_r,
+    species_list = [
+        PlasmaParticleContainerPy(),
+        PlasmaParticleContainerPy()
+    ]
+
+    species_list[0].is_ion = False
+    species_list[1].is_ion = True
+
+    pp_initialize(
+        species_list,
         n_xi,
+        ppc,
+        dr,
         radial_density_normalized,
-        max_gamma,
         ion_motion,
+        store_plasma_history,
         ion_mass,
         free_electrons_per_ion,
-        plasma_pusher,
-        p_shape,
-        store_plasma_history,
-        particle_diags,
+        plasma_pusher
     )
-    pp.initialize()
 
-    # Evolve plasma from right to left and calculate psi, b_t_bar, rho and
-    # chi on a grid.
-    for step in range(n_xi):
-        slice_i = n_xi - step - 1
+    if len(particle_diags) == 0:
+        particle_diags = ["none"]
 
-        pp.sort()
-
-        if laser_source:
-            pp.gather_laser_sources(
-                laser_a2[slice_i + 2],
-                nabla_a2[slice_i + 2],
-                r_fld[0],
-                r_fld[-1],
-                dr,
-            )
-        pp.gather_bunch_sources(
-            bunch_source_arrays,
-            bunch_source_xi_indices,
-            bunch_source_metadata,
-            slice_i,
-        )
-
-        pp.calculate_fields()
-
-        pp.calculate_psi_at_grid(r_fld, psi[slice_i + 2, 2:-2])
-        pp.calculate_b_theta_at_grid(r_fld, B_t[slice_i + 2, 2:-2])
-
-        if calculate_rho:
-            pp.deposit_rho(
-                rho[slice_i + 2],
-                rho_e[slice_i + 2],
-                rho_i[slice_i + 2],
-                r_fld,
-                n_r,
-                dr,
-            )
-        elif "w" in particle_diags:
-            pp.calculate_weights()
-        if laser_source:
-            pp.deposit_chi(chi[slice_i + 2], r_fld, n_r, dr)
-
-        pp.ions_computed = True
-
-        if store_plasma_history:
-            pp.store_current_step()
-        if slice_i > 0:
-            pp.evolve(dxi)
+    evolve_one_step(
+        tuple(s.serialize() for s in species_list),
+        n_xi,
+        n_r,
+        dxi,
+        dr,
+        r_fld,
+        laser_source,
+        laser_a2,
+        nabla_a2,
+        bunch_source_arrays,
+        bunch_source_xi_indices,
+        bunch_source_metadata,
+        max_gamma,
+        psi,
+        B_t,
+        p_shape,
+        calculate_rho,
+        rho,
+        rho_e,
+        rho_i,
+        chi,
+        store_plasma_history,
+        particle_diags
+    )
 
     # Calculate derived fields (E_z, W_r, and E_r).
     E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p * 1e-6)
@@ -220,4 +305,4 @@ def calculate_wakefields(
     E_r *= -E_0
     # B_t[:] = (b_t_bar + b_t_beam) * E_0 / ct.c
     B_t *= E_0 / ct.c
-    return pp.get_history()
+    return pp_get_history(species_list, store_plasma_history)
