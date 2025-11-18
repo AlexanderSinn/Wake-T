@@ -62,6 +62,16 @@ def evolve_one_step(
     store_plasma_history,
     particle_diags,
 ):
+    """
+    Compute the wakefield by evolving the plasma over all zeta slices.
+    For performance reasons, this is done in a single JIT-compiled
+    function to minimize the number of Python-to-Numba function calls.
+
+    pp_serialized_list is passed in as a Tuple[Tuple[np.ndarray]]
+    instead of a class so that Numba can cache the JIT compiled function.
+
+    See calculate_wakefields() for parametes.
+    """
     ions_computed = False
     pp_species_list = [
         PlasmaParticleContainer(species) for species in pp_serialized_list
@@ -156,9 +166,6 @@ def calculate_wakefields(
     ----------
     laser_a2 : ndarray
         A (nz x nr) array containing the square of the laser envelope.
-    beam_part : list
-        List of numpy arrays containing the spatial coordinates and charge of
-        all beam particles, i.e [x, y, xi, q].
     r_max : float
         Maximum radial position up to which plasma wakefield will be
         calculated.
@@ -172,8 +179,8 @@ def calculate_wakefields(
         Number of grid elements along r in which to calculate the wakefields.
     n_xi : int
         Number of grid elements along xi in which to calculate the wakefields.
-    ppc : int (optional)
-        Number of plasma particles per 1d cell along the radial direction.
+    ppc : array_like
+        see Quasistatic2DWakefieldIons.
     n_p : float
         On-axis plasma density in units of m^{-3}.
     r_max_plasma : float
@@ -219,6 +226,8 @@ def calculate_wakefields(
         diagnostics. By default, False.
     particle_diags : list, optional
         List of particle quantities to save to diagnostics.
+    fld_arrays : list, optional
+        List of all the fields.
     """
     rho, rho_e, rho_i, chi, E_r, E_z, B_t, xi_fld, r_fld = fld_arrays
 

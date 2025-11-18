@@ -57,7 +57,7 @@ def calculate_b_theta_at_particles(species_list):
 
     Parameters
     ----------
-    species_list: tuple(serialized PlasmaParticleContainer)
+    species_list: List[PlasmaParticleContainer]
         Data for all plasma species.
     """
     # Only the magnetic field from the electrons is computed, so the equations

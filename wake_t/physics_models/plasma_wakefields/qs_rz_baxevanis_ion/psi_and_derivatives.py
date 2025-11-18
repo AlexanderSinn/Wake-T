@@ -15,7 +15,7 @@ def calculate_psi_and_derivatives_at_particles(species_list, ions_computed):
 
     Parameters
     ----------
-    species_list: tuple(serialized PlasmaParticleContainer)
+    species_list: List[PlasmaParticleContainer]
         Data for all plasma species.
     ions_computed : bool
         Whether to skip the computation for non-moving ions.

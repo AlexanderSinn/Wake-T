@@ -38,8 +38,34 @@ def pp_initialize(
     free_electrons_per_ion,
     pusher,
 ):
-    """Initialize column of plasma particles."""
+    """
+    Initialize column of plasma particles.
 
+    Parameters
+    ----------
+    species_list : List[PlasmaParticleContainerPy]
+        Data for all plasma species.
+    nz : int
+        Number of grid elements along `z`.
+    ppc: array_like
+        see Quasistatic2DWakefieldIons.
+    dr : float
+        Radial step size of the discretized simulation box.
+    radial_density : callable
+        Function defining the radial density profile.
+    ion_motion : bool
+        Whether to allow the plasma ions to move.
+    store_history : bool
+        Whether to store the plasma particle evolution.
+    ion_mass : float, optional
+        Mass of the plasma ions.
+    free_electrons_per_ion : int
+        Number of free electrons per ion. The ion charge is adjusted
+        accordingly to maintain a quasi-neutral plasma (i.e.,
+        ion charge = e * free_electrons_per_ion).
+    pusher : str
+        The pusher used to evolve the plasma particles.
+    """
     # Create radial distribution of plasma particles.
     rmin = 0.0
     for i in range(ppc.shape[0]):
@@ -147,6 +173,9 @@ def pp_initialize(
 
 @njit_serial
 def pp_sort(species_list):
+    """Sort plasma particles radially.
+    Only some of the arrays need to be sorted
+    """
     for s in species_list:
         if s.do_push:
             indices = np.argsort(s.r)
@@ -345,7 +374,7 @@ def pp_get_history(species_list, store_history):
 
     Returns
     -------
-    list[dict]
+    List[Dict]
         A dictionary containing the particle history arrays for each plasma species.
     """
     if store_history:
