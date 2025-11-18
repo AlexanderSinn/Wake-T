@@ -44,10 +44,10 @@ def pp_initialize(
     rmin = 0.0
     for i in range(ppc.shape[0]):
         rmax = ppc[i, 0]
-        ppc = ppc[i, 1]
+        local_ppc = ppc[i, 1]
 
-        n_elec = int(np.round((rmax - rmin) / dr * ppc))
-        dr_p_i = dr / ppc
+        n_elec = int(np.round((rmax - rmin) / dr * local_ppc))
+        dr_p_i = dr / local_ppc
         rmax = rmin + n_elec * dr_p_i
 
         r_i = np.linspace(rmin + dr_p_i / 2, rmax - dr_p_i / 2, n_elec)
