@@ -26,6 +26,7 @@ from wake_t.utilities.numba import njit_serial
 
 from .plasma_particle_container import PlasmaParticleContainerPy
 
+
 def pp_initialize(
     init_list,
     nz,
@@ -164,6 +165,7 @@ def pp_initialize(
         _pp_allocate_ab2_arrays(species_list)
 
     return species_list
+
 
 @njit_serial
 def pp_sort(species_list):

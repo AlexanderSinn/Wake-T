@@ -277,14 +277,14 @@ def calculate_wakefields(
     # Set parameters for electron and ion species in normalized units
     init_list = [
         {
-            "charge" : free_electrons_per_ion,
-            "mass" : free_electrons_per_ion,
-            "is_ion" : False,
+            "charge": free_electrons_per_ion,
+            "mass": free_electrons_per_ion,
+            "is_ion": False,
         },
         {
-            "charge" : -free_electrons_per_ion,
-            "mass" : ion_mass / ct.m_e,
-            "is_ion" : True,
+            "charge": -free_electrons_per_ion,
+            "mass": ion_mass / ct.m_e,
+            "is_ion": True,
         },
     ]
 
