@@ -29,10 +29,7 @@ from .utils import longitudinal_gradient, radial_gradient
 
 from wake_t.utilities.numba import njit_serial
 
-from .plasma_particle_container import (
-    PlasmaParticleContainer,
-    PlasmaParticleContainerPy,
-)
+from .plasma_particle_container import PlasmaParticleContainer
 
 
 @njit_serial
@@ -277,21 +274,28 @@ def calculate_wakefields(
     # and magnetic field)
 
     # Initialize plasma particles.
-    species_list = [PlasmaParticleContainerPy(), PlasmaParticleContainerPy()]
+    # Set parameters for electron and ion species in normalized units
+    init_list = [
+        {
+            "charge" : free_electrons_per_ion,
+            "mass" : free_electrons_per_ion,
+            "is_ion" : False,
+        },
+        {
+            "charge" : -free_electrons_per_ion,
+            "mass" : ion_mass / ct.m_e,
+            "is_ion" : True,
+        },
+    ]
 
-    species_list[0].is_ion = False
-    species_list[1].is_ion = True
-
-    pp_initialize(
-        species_list,
+    species_list = pp_initialize(
+        init_list,
         n_xi,
         ppc,
         dr,
         radial_density_normalized,
         ion_motion,
         store_plasma_history,
-        ion_mass,
-        free_electrons_per_ion,
         plasma_pusher,
     )
 

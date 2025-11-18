@@ -1,7 +1,6 @@
 """Contains the definition of the `PlasmaParticles` class."""
 
 import numpy as np
-import scipy.constants as ct
 
 from .psi_and_derivatives import (
     calculate_psi_with_interpolation,
@@ -25,17 +24,16 @@ from .utils import (
 
 from wake_t.utilities.numba import njit_serial
 
+from .plasma_particle_container import PlasmaParticleContainerPy
 
 def pp_initialize(
-    species_list,
+    init_list,
     nz,
     ppc,
     dr,
     radial_density,
     ion_motion,
     store_history,
-    ion_mass,
-    free_electrons_per_ion,
     pusher,
 ):
     """
@@ -43,8 +41,9 @@ def pp_initialize(
 
     Parameters
     ----------
-    species_list : List[PlasmaParticleContainerPy]
-        Data for all plasma species.
+    init_list : List[Dict]
+        Dict containing charge, mass and is_ion in normalized units
+        for all plasma species.
     nz : int
         Number of grid elements along `z`.
     ppc: array_like
@@ -57,12 +56,6 @@ def pp_initialize(
         Whether to allow the plasma ions to move.
     store_history : bool
         Whether to store the plasma particle evolution.
-    ion_mass : float, optional
-        Mass of the plasma ions.
-    free_electrons_per_ion : int
-        Number of free electrons per ion. The ion charge is adjusted
-        accordingly to maintain a quasi-neutral plasma (i.e.,
-        ion charge = e * free_electrons_per_ion).
     pusher : str
         The pusher used to evolve the plasma particles.
     """
@@ -100,7 +93,14 @@ def pp_initialize(
     w = dr_p * r * radial_density(r)
     w_center = w / 2 - dr_p**2 / 8
 
-    for s in species_list:
+    species_list = [PlasmaParticleContainerPy() for _ in init_list]
+
+    for s, init in zip(species_list, init_list):
+        # Charge and mass of the macroparticles of each species.
+        s.is_ion = bool(init["is_ion"])
+        s.charge = float(init["charge"])
+        s.mass = float(init["mass"])
+
         s.num_particles = num_per_species
         s.do_push = not s.is_ion or ion_motion
         s.store_history = store_history
@@ -115,13 +115,6 @@ def pp_initialize(
         s.w_center = np.copy(w_center)
         s.r_to_x = np.ones(s.num_particles, dtype=np.int32)
         s.id = np.copy(idd)
-        # Charge and mass of the macroparticles of each species.
-        if s.is_ion:
-            s.mass = float(ion_mass / ct.m_e)
-            s.charge = float(-free_electrons_per_ion)
-        else:
-            s.mass = float(free_electrons_per_ion)
-            s.charge = float(free_electrons_per_ion)
 
         # Create history arrays.
         if s.store_history:
@@ -170,6 +163,7 @@ def pp_initialize(
     if pusher == "ab2":
         _pp_allocate_ab2_arrays(species_list)
 
+    return species_list
 
 @njit_serial
 def pp_sort(species_list):
