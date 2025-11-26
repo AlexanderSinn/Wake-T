@@ -5,6 +5,7 @@ from typing import Optional
 import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
+from numba.typed import List
 
 from wake_t.utilities.numba import njit_serial
 from wake_t.particles.interpolation import gather_main_fields_cyl_linear
@@ -156,13 +157,13 @@ class AdaptiveGrid:
             s_d,
             self.psi_grid,
             self.b_t,
-            tuple(h["r_hist"] for h in pp_hist),
-            tuple(h["log_r_hist"] for h in pp_hist),
-            tuple(h["sum_1_hist"] for h in pp_hist),
-            tuple(h["sum_2_hist"] for h in pp_hist),
-            tuple(h["a_0_hist"] for h in pp_hist),
-            tuple(h["a_i_hist"] for h in pp_hist),
-            tuple(h["b_i_hist"] for h in pp_hist),
+            List(h["r_hist"] for h in pp_hist),
+            List(h["log_r_hist"] for h in pp_hist),
+            List(h["sum_1_hist"] for h in pp_hist),
+            List(h["sum_2_hist"] for h in pp_hist),
+            List(h["a_0_hist"] for h in pp_hist),
+            List(h["a_i_hist"] for h in pp_hist),
+            List(h["b_i_hist"] for h in pp_hist),
         )
 
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p * 1e-6)

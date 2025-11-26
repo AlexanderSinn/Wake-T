@@ -9,6 +9,7 @@ for the full details about this model.
 import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
+from numba.typed import List
 
 from .plasma_particles import (
     pp_initialize,
@@ -300,7 +301,7 @@ def calculate_wakefields(
     )
 
     evolve_one_step(
-        tuple(s.serialize() for s in species_list),
+        List(s.serialize() for s in species_list),
         n_xi,
         n_r,
         dxi,
@@ -310,9 +311,9 @@ def calculate_wakefields(
         laser_a2,
         nabla_a2,
         has_beam_source,
-        bunch_source_arrays,
-        bunch_source_xi_indices,
-        bunch_source_metadata,
+        List(bunch_source_arrays),
+        List(bunch_source_xi_indices),
+        List(bunch_source_metadata),
         max_gamma,
         psi,
         B_t,
@@ -323,7 +324,7 @@ def calculate_wakefields(
         rho_i,
         chi,
         store_plasma_history,
-        particle_diags,
+        List(particle_diags),
     )
 
     # Calculate derived fields (E_z, W_r, and E_r).
