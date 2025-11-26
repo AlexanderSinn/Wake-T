@@ -13,6 +13,7 @@ import aptools.plasma_accel.general_equations as ge
 from .plasma_particles import PlasmaParticles
 from .utils import longitudinal_gradient, radial_gradient
 
+import time
 
 def calculate_wakefields(
     laser_a2,
@@ -163,14 +164,30 @@ def calculate_wakefields(
     )
     pp.initialize()
 
+    time_full = -time.time()
+    time_sort = 0.
+    time_gather_laser = 0.
+    time_gather_bunch = 0.
+    time_calc_fields = 0.
+    time_calc_psi_grid = 0.
+    time_calc_bt_grid = 0.
+    time_depos_rho = 0.
+    time_calc_weights = 0.
+    time_depos_chi = 0.
+    time_store_hist = 0.
+    time_evolve = 0.
+
     # Evolve plasma from right to left and calculate psi, b_t_bar, rho and
     # chi on a grid.
     for step in range(n_xi):
         slice_i = n_xi - step - 1
 
+        time_sort -= time.time()
         pp.sort()
+        time_sort += time.time()
 
         if laser_source:
+            time_gather_laser -= time.time()
             pp.gather_laser_sources(
                 laser_a2[slice_i + 2],
                 nabla_a2[slice_i + 2],
@@ -178,19 +195,32 @@ def calculate_wakefields(
                 r_fld[-1],
                 dr,
             )
+            time_gather_laser += time.time()
+
+
+        time_gather_bunch -= time.time()
         pp.gather_bunch_sources(
             bunch_source_arrays,
             bunch_source_xi_indices,
             bunch_source_metadata,
             slice_i,
         )
+        time_gather_bunch += time.time()
 
+        time_calc_fields -= time.time()
         pp.calculate_fields()
+        time_calc_fields += time.time()
 
+        time_calc_psi_grid -= time.time()
         pp.calculate_psi_at_grid(r_fld, psi[slice_i + 2, 2:-2])
+        time_calc_psi_grid += time.time()
+
+        time_calc_bt_grid -= time.time()
         pp.calculate_b_theta_at_grid(r_fld, B_t[slice_i + 2, 2:-2])
+        time_calc_bt_grid += time.time()
 
         if calculate_rho:
+            time_depos_rho -= time.time()
             pp.deposit_rho(
                 rho[slice_i + 2],
                 rho_e[slice_i + 2],
@@ -199,17 +229,41 @@ def calculate_wakefields(
                 n_r,
                 dr,
             )
+            time_depos_rho += time.time()
         elif "w" in particle_diags:
+            time_calc_weights -= time.time()
             pp.calculate_weights()
+            time_calc_weights += time.time()
         if laser_source:
+            time_depos_chi -= time.time()
             pp.deposit_chi(chi[slice_i + 2], r_fld, n_r, dr)
+            time_depos_chi += time.time()
 
         pp.ions_computed = True
 
         if store_plasma_history:
+            time_store_hist -= time.time()
             pp.store_current_step()
+            time_store_hist += time.time()
         if slice_i > 0:
+            time_evolve -= time.time()
             pp.evolve(dxi)
+            time_evolve += time.time()
+
+    time_full += time.time()
+
+    print(f"full:               {1000*(time_full):.02f} ms")
+    print(f"time_sort:          {1000*(time_sort):.02f} ms")
+    print(f"time_gather_laser:  {1000*(time_gather_laser):.02f} ms")
+    print(f"time_gather_bunch:  {1000*(time_gather_bunch):.02f} ms")
+    print(f"time_calc_fields:   {1000*(time_calc_fields):.02f} ms")
+    print(f"time_calc_psi_grid: {1000*(time_calc_psi_grid):.02f} ms")
+    print(f"time_calc_bt_grid:  {1000*(time_calc_bt_grid):.02f} ms")
+    print(f"time_depos_rho:     {1000*(time_depos_rho):.02f} ms")
+    print(f"time_calc_weights:  {1000*(time_calc_weights):.02f} ms")
+    print(f"time_depos_chi:     {1000*(time_depos_chi):.02f} ms")
+    print(f"time_store_hist:    {1000*(time_store_hist):.02f} ms")
+    print(f"time_evolve:        {1000*(time_evolve):.02f} ms")
 
     # Calculate derived fields (E_z, W_r, and E_r).
     E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p * 1e-6)
