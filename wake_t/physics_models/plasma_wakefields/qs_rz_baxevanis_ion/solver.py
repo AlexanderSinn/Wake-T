@@ -11,6 +11,8 @@ import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 from numba.typed import List
 
+import time
+
 from .plasma_particles import (
     pp_initialize,
     pp_sort,
@@ -33,7 +35,19 @@ from wake_t.utilities.numba import njit_serial
 from .plasma_particle_container import PlasmaParticleContainer
 
 
-@njit_serial
+time_sort = 0.
+time_gather_laser = 0.
+time_gather_bunch = 0.
+time_calc_fields = 0.
+time_calc_psi_grid = 0.
+time_calc_bt_grid = 0.
+time_depos_rho = 0.
+time_calc_weights = 0.
+time_depos_chi = 0.
+time_store_hist = 0.
+time_evolve = 0.
+
+# @njit_serial
 def evolve_one_step(
     pp_serialized_list,
     n_xi,
@@ -70,18 +84,22 @@ def evolve_one_step(
 
     See calculate_wakefields() for parametes.
     """
+    global time_sort, time_gather_laser, time_gather_bunch, time_calc_fields, time_calc_psi_grid, time_calc_bt_grid, time_depos_rho, time_calc_weights, time_depos_chi, time_store_hist, time_evolve
     ions_computed = False
-    pp_species_list = [
+    pp_species_list = List(
         PlasmaParticleContainer(species) for species in pp_serialized_list
-    ]
+    )
 
     # Evolve plasma from right to left and calculate psi, b_t_bar, rho and
     # chi on a grid.
     for step in range(n_xi):
         slice_i = n_xi - step - 1
+        time_sort -= time.time()
         pp_sort(pp_species_list)
+        time_sort += time.time()
 
         if has_laser_source:
+            time_gather_laser -= time.time()
             pp_gather_laser_sources(
                 pp_species_list,
                 laser_a2[slice_i + 2],
@@ -90,7 +108,9 @@ def evolve_one_step(
                 r_fld[-1],
                 dr,
             )
+            time_gather_laser += time.time()
         if has_beam_source:
+            time_gather_bunch -= time.time()
             pp_gather_bunch_sources(
                 pp_species_list,
                 bunch_source_arrays,
@@ -98,14 +118,22 @@ def evolve_one_step(
                 bunch_source_metadata,
                 slice_i,
             )
+            time_gather_bunch += time.time()
 
+        time_calc_fields -= time.time()
         pp_calculate_fields(pp_species_list, ions_computed, max_gamma)
+        time_calc_fields += time.time()
 
+        time_calc_psi_grid -= time.time()
         pp_calculate_psi_at_grid(pp_species_list, r_fld, psi[slice_i + 2, 2:-2])
+        time_calc_psi_grid += time.time()
 
+        time_calc_bt_grid -= time.time()
         pp_calculate_b_theta_at_grid(pp_species_list, r_fld, B_t[slice_i + 2, 2:-2])
+        time_calc_bt_grid += time.time()
 
         if calculate_rho:
+            time_depos_rho -= time.time()
             pp_deposit_rho(
                 pp_species_list,
                 ions_computed,
@@ -117,18 +145,27 @@ def evolve_one_step(
                 n_r,
                 dr,
             )
+            time_depos_rho += time.time()
         elif "w" in particle_diags:
+            time_calc_weights -= time.time()
             pp_calculate_weights(pp_species_list, ions_computed)
+            time_calc_weights += time.time()
         if has_laser_source:
+            time_depos_chi -= time.time()
             pp_deposit_chi(pp_species_list, shape, chi[slice_i + 2], r_fld, n_r, dr)
+            time_depos_chi += time.time()
 
         ions_computed = True
 
         if store_plasma_history:
+            time_store_hist -= time.time()
             pp_store_current_step(pp_species_list, particle_diags)
+            time_store_hist += time.time()
 
         if slice_i > 0:
+            time_evolve -= time.time()
             pp_evolve(pp_species_list, dxi)
+            time_evolve += time.time()
 
 
 def calculate_wakefields(
@@ -227,6 +264,7 @@ def calculate_wakefields(
     fld_arrays : list, optional
         List of all the fields.
     """
+    global time_sort, time_gather_laser, time_gather_bunch, time_calc_fields, time_calc_psi_grid, time_calc_bt_grid, time_depos_rho, time_calc_weights, time_depos_chi, time_store_hist, time_evolve
     rho, rho_e, rho_i, chi, E_r, E_z, B_t, xi_fld, r_fld = fld_arrays
 
     # Convert to normalized units.
@@ -300,6 +338,19 @@ def calculate_wakefields(
         plasma_pusher,
     )
 
+    time_full = -time.time()
+    time_sort = 0.
+    time_gather_laser = 0.
+    time_gather_bunch = 0.
+    time_calc_fields = 0.
+    time_calc_psi_grid = 0.
+    time_calc_bt_grid = 0.
+    time_depos_rho = 0.
+    time_calc_weights = 0.
+    time_depos_chi = 0.
+    time_store_hist = 0.
+    time_evolve = 0.
+
     evolve_one_step(
         List(s.serialize() for s in species_list),
         n_xi,
@@ -326,6 +377,21 @@ def calculate_wakefields(
         store_plasma_history,
         List(particle_diags),
     )
+
+    time_full += time.time()
+
+    print(f"full:               {1000*(time_full):.02f} ms")
+    print(f"time_sort:          {1000*(time_sort):.02f} ms")
+    print(f"time_gather_laser:  {1000*(time_gather_laser):.02f} ms")
+    print(f"time_gather_bunch:  {1000*(time_gather_bunch):.02f} ms")
+    print(f"time_calc_fields:   {1000*(time_calc_fields):.02f} ms")
+    print(f"time_calc_psi_grid: {1000*(time_calc_psi_grid):.02f} ms")
+    print(f"time_calc_bt_grid:  {1000*(time_calc_bt_grid):.02f} ms")
+    print(f"time_depos_rho:     {1000*(time_depos_rho):.02f} ms")
+    print(f"time_calc_weights:  {1000*(time_calc_weights):.02f} ms")
+    print(f"time_depos_chi:     {1000*(time_depos_chi):.02f} ms")
+    print(f"time_store_hist:    {1000*(time_store_hist):.02f} ms")
+    print(f"time_evolve:        {1000*(time_evolve):.02f} ms")
 
     # Calculate derived fields (E_z, W_r, and E_r).
     E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p * 1e-6)

@@ -166,6 +166,7 @@ def pp_initialize(
 
     return species_list
 
+# import time
 
 @njit_serial
 def pp_sort(species_list):
@@ -174,8 +175,27 @@ def pp_sort(species_list):
     """
     for s in species_list:
         if s.do_push:
-            indices = np.argsort(s.r)
-            sort_particle_arrays(s, indices)
+            # t1 = time.time()
+            # indices1 = np.argsort(s.r, kind="stable")
+
+            # nonz = np.nonzero(indices1 != np.arange(len(indices1)))[0]
+
+            # if len(nonz) > 0:
+            #     print(len(indices1), nonz[0], nonz[-1])
+
+            # t2 = time.time()
+            # indices2 = np.argsort(s.r)
+            # t3 = time.time()
+            # indices2 = np.argsort(s.r, kind="mergesort")
+            # t4 = time.time()
+            # if np.all(indices1 == indices2):
+            #     print(f"All equal, stable {1000000*(t2-t1):.02f} µs default {1000000*(t3-t2):.02f} µs merge {1000000*(t4-t3):.02f} µs len {len(indices1)} ndiff {np.sum(indices1 != np.arange(len(indices1)))}")
+            # else:
+            #     print("Sort difference")
+            #     print(indices1[indices1 != indices2])
+            #     print(indices2[indices1 != indices2])
+            # indices = np.argsort(s.r, kind="mergesort")
+            sort_particle_arrays(s)
 
 
 @njit_serial

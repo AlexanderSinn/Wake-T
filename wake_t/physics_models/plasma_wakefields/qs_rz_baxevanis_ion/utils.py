@@ -3,6 +3,7 @@
 import math
 
 import numpy as np
+import numba
 
 from wake_t.utilities.numba import njit_serial
 
@@ -159,7 +160,7 @@ def check_gamma(gamma, pz, pr, max_gamma):
 
 
 @njit_serial()
-def sort_particle_arrays(s, indices):
+def sort_particle_arrays(s):
     """Sort all the particle arrays with a given sorting order.
 
     Implementing it like this looks very ugly, but it is much faster than
@@ -167,6 +168,24 @@ def sort_particle_arrays(s, indices):
     than implementing a `sort_array` function that is called on each array.
     This is probably because of the overhead from calling numba functions.
     """
+
+    # plasma_radius = s.r
+    # with numba.objmode(indices="int64[::1]"):
+    #     indices = np.argsort(plasma_radius, kind="stable")
+
+    indices = np.argsort(s.r)
+    # indices = np.argsort(s.r, kind="mergesort")
+
+    # plasma_radius = list(s.r)
+    # plasma_radius = sorted(plasma_radius)
+
+    # indices = np.arange(len(s.r), dtype=np.float64)
+    # run_timsort_with_values(s.r, indices)
+
+    # indices = indices.astype(np.int64)
+
+    # indices = sorted(range(len(plasma_radius)), key=plasma_radius.__getitem__)
+
     a1_orig = np.copy(s.r)
     a2_orig = np.copy(s.dr_p)
     a3_orig = np.copy(s.pr)
