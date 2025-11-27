@@ -160,7 +160,7 @@ def check_gamma(gamma, pz, pr, max_gamma):
 
 
 @njit_serial()
-def sort_particle_arrays(s):
+def sort_particle_arrays(s, indices):
     """Sort all the particle arrays with a given sorting order.
 
     Implementing it like this looks very ugly, but it is much faster than
@@ -173,7 +173,7 @@ def sort_particle_arrays(s):
     # with numba.objmode(indices="int64[::1]"):
     #     indices = np.argsort(plasma_radius, kind="stable")
 
-    indices = np.argsort(s.r)
+    # indices = np.argsort(s.r)
     # indices = np.argsort(s.r, kind="mergesort")
 
     # plasma_radius = list(s.r)
@@ -186,28 +186,92 @@ def sort_particle_arrays(s):
 
     # indices = sorted(range(len(plasma_radius)), key=plasma_radius.__getitem__)
 
-    a1_orig = np.copy(s.r)
-    a2_orig = np.copy(s.dr_p)
-    a3_orig = np.copy(s.pr)
-    a4_orig = np.copy(s.pz)
-    a5_orig = np.copy(s.gamma)
-    a6_orig = np.copy(s.w)
-    a7_orig = np.copy(s.w_center)
-    a8_orig = np.copy(s.r_to_x)
-    a9_orig = np.copy(s.id)
-    a10_orig = np.copy(s.dr)
-    a11_orig = np.copy(s.dpr)
-    for i in range(s.num_particles):
+    a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11 = \
+        s.r, s.dr_p, s.pr, s.pz, s.gamma, s.w, s.w_center, s.r_to_x, s.id, s.dr, s.dpr
+
+    # a1_orig = np.copy(s.r)
+    # a2_orig = np.copy(s.dr_p)
+    # a3_orig = np.copy(s.pr)
+    # a4_orig = np.copy(s.pz)
+    # a5_orig = np.copy(s.gamma)
+    # a6_orig = np.copy(s.w)
+    # a7_orig = np.copy(s.w_center)
+    # a8_orig = np.copy(s.r_to_x)
+    # a9_orig = np.copy(s.id)
+    # a10_orig = np.copy(s.dr)
+    # a11_orig = np.copy(s.dpr)
+    # for i in range(s.num_particles):
+    #     i_sort = indices[i]
+    #     if i != i_sort:
+    #         s.r[i] = a1_orig[i_sort]
+    #         s.dr_p[i] = a2_orig[i_sort]
+    #         s.pr[i] = a3_orig[i_sort]
+    #         s.pz[i] = a4_orig[i_sort]
+    #         s.gamma[i] = a5_orig[i_sort]
+    #         s.w[i] = a6_orig[i_sort]
+    #         s.w_center[i] = a7_orig[i_sort]
+    #         s.r_to_x[i] = a8_orig[i_sort]
+    #         s.id[i] = a9_orig[i_sort]
+    #         s.dr[:, i] = a10_orig[:, i_sort]
+    #         s.dpr[:, i] = a11_orig[:, i_sort]
+    a1_orig = np.copy(a1)
+    a2_orig = np.copy(a2)
+    a3_orig = np.copy(a3)
+    a4_orig = np.copy(a4)
+    a5_orig = np.copy(a5)
+    a6_orig = np.copy(a6)
+    a7_orig = np.copy(a7)
+    a8_orig = np.copy(a8)
+    a9_orig = np.copy(a9)
+    a10_orig = np.copy(a10)
+    a11_orig = np.copy(a11)
+    n_part = indices.shape[0]
+    for i in range(n_part):
         i_sort = indices[i]
         if i != i_sort:
-            s.r[i] = a1_orig[i_sort]
-            s.dr_p[i] = a2_orig[i_sort]
-            s.pr[i] = a3_orig[i_sort]
-            s.pz[i] = a4_orig[i_sort]
-            s.gamma[i] = a5_orig[i_sort]
-            s.w[i] = a6_orig[i_sort]
-            s.w_center[i] = a7_orig[i_sort]
-            s.r_to_x[i] = a8_orig[i_sort]
-            s.id[i] = a9_orig[i_sort]
-            s.dr[:, i] = a10_orig[:, i_sort]
-            s.dpr[:, i] = a11_orig[:, i_sort]
+            a1[i] = a1_orig[i_sort]
+            a2[i] = a2_orig[i_sort]
+            a3[i] = a3_orig[i_sort]
+            a4[i] = a4_orig[i_sort]
+            a5[i] = a5_orig[i_sort]
+            a6[i] = a6_orig[i_sort]
+            a7[i] = a7_orig[i_sort]
+            a8[i] = a8_orig[i_sort]
+            a9[i] = a9_orig[i_sort]
+            a10[:, i] = a10_orig[:, i_sort]
+            a11[:, i] = a11_orig[:, i_sort]
+
+# @njit_serial()
+# def sort_particle_arrays(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, indices):
+#     """Sort all the particle arrays with a given sorting order.
+#     Implementing it like this looks very ugly, but it is much faster than
+#     repeating `array = array[indices]` for each array. It is also much faster
+#     than implementing a `sort_array` function that is called on each array.
+#     This is probably because of the overhead from calling numba functions.
+#     """
+#     a1_orig = np.copy(a1)
+#     a2_orig = np.copy(a2)
+#     a3_orig = np.copy(a3)
+#     a4_orig = np.copy(a4)
+#     a5_orig = np.copy(a5)
+#     a6_orig = np.copy(a6)
+#     a7_orig = np.copy(a7)
+#     a8_orig = np.copy(a8)
+#     a9_orig = np.copy(a9)
+#     a10_orig = np.copy(a10)
+#     a11_orig = np.copy(a11)
+#     n_part = indices.shape[0]
+#     for i in range(n_part):
+#         i_sort = indices[i]
+#         if i != i_sort:
+#             a1[i] = a1_orig[i_sort]
+#             a2[i] = a2_orig[i_sort]
+#             a3[i] = a3_orig[i_sort]
+#             a4[i] = a4_orig[i_sort]
+#             a5[i] = a5_orig[i_sort]
+#             a6[i] = a6_orig[i_sort]
+#             a7[i] = a7_orig[i_sort]
+#             a8[i] = a8_orig[i_sort]
+#             a9[i] = a9_orig[i_sort]
+#             a10[:, i] = a10_orig[:, i_sort]
+#             a11[:, i] = a11_orig[:, i_sort]

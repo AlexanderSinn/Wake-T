@@ -1,6 +1,7 @@
 """Contains the definition of the `PlasmaParticles` class."""
 
 import numpy as np
+import numba
 
 from .psi_and_derivatives import (
     calculate_psi_with_interpolation,
@@ -195,7 +196,27 @@ def pp_sort(species_list):
             #     print(indices1[indices1 != indices2])
             #     print(indices2[indices1 != indices2])
             # indices = np.argsort(s.r, kind="mergesort")
-            sort_particle_arrays(s)
+
+            plasma_radius = s.r
+            with numba.objmode(indices="int64[::1]"):
+                indices = np.argsort(plasma_radius, kind="stable")
+            # indices = np.argsort(s.r, kind="stable")
+            sort_particle_arrays(s, indices)
+
+            # sort_particle_arrays(
+            #     s.r,
+            #     s.dr_p,
+            #     s.pr,
+            #     s.pz,
+            #     s.gamma,
+            #     s.w,
+            #     s.w_center,
+            #     s.r_to_x,
+            #     s.id,
+            #     s.dr,
+            #     s.dpr,
+            #     indices,
+            # )
 
 
 @njit_serial
