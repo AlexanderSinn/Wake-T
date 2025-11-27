@@ -1,6 +1,7 @@
 """Contains the definition of the `PlasmaParticles` class."""
 
 import numpy as np
+import numba
 
 from .psi_and_derivatives import (
     calculate_psi_with_interpolation,
@@ -174,7 +175,18 @@ def pp_sort(species_list):
     """
     for s in species_list:
         if s.do_push:
-            indices = np.argsort(s.r)
+            # When a NumPy function is called within a Numba JIT-compiled function, it does not
+            # actually call NumPy. Instead, a reimplementation from Numba is used. Unfortunately,
+            # the Numba version of np.argsort (both quicksort and mergesort) is significantly
+            # slower than the actual NumPy argsort (here using timsort), especially for the usually
+            # partially sorted arrays used here. Timsort is also available from Numba, however,
+            # it is also slow and does not have a user interface. So we are forced to take the
+            # performance penalty from going into object mode to call the actual NumPy sorting
+            # function. Make sure that we do not pass s into object mode.
+            plasma_radius = s.r
+            with numba.objmode(indices="int64[::1]"):
+                indices = np.argsort(plasma_radius, kind="stable")
+
             sort_particle_arrays(s, indices)
 
 
