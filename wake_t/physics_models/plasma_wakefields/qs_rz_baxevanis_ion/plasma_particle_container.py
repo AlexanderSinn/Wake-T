@@ -5,45 +5,45 @@ import numba
 
 class PlasmaParticleContainerPy:
     # Particle properties
-    r: numba.float64[::1] # radial position
-    log_r: numba.float64[::1] # logarithm of radial position
-    pr: numba.float64[::1] # momentum in r
-    pz: numba.float64[::1] # momentum in z
-    gamma: numba.float64[::1] # lorentz factor
-    w: numba.float64[::1] # weight
-    w_center: numba.float64[::1] # weight until the particle center.
-    r_to_x: numba.int32[::1] # -1 if the particle crossed r=0, else +1
-    id: numba.int32[::1] # unique (within a species) id
-    mass: float # single particle mass
-    charge: float # single particle charge
+    r: numba.float64[::1]  # radial position
+    log_r: numba.float64[::1]  # logarithm of radial position
+    pr: numba.float64[::1]  # momentum in r
+    pz: numba.float64[::1]  # momentum in z
+    gamma: numba.float64[::1]  # lorentz factor
+    w: numba.float64[::1]  # weight
+    w_center: numba.float64[::1]  # weight until the particle center.
+    r_to_x: numba.int32[::1]  # -1 if the particle crossed r=0, else +1
+    id: numba.int32[::1]  # unique (within a species) id
+    mass: float  # single particle mass
+    charge: float  # single particle charge
 
     # Fields at particles
-    psi: numba.float64[::1] # plasma wakefield potential
-    dr_psi: numba.float64[::1] # focussing field
-    dxi_psi: numba.float64[::1] # accelerating field
-    b_t: numba.float64[::1] # theta component of magnetic field
-    b_t_0: numba.float64[::1] # beam contribution to b_t
-    nabla_a2: numba.float64[::1] # gradient of laser envelope
-    a2: numba.float64[::1] # absolute value squared of laser envelope
-    rho: numba.float64[::1] # charge density
-    chi: numba.float64[::1] # refractive index
+    psi: numba.float64[::1]  # plasma wakefield potential
+    dr_psi: numba.float64[::1]  # focussing field
+    dxi_psi: numba.float64[::1]  # accelerating field
+    b_t: numba.float64[::1]  # theta component of magnetic field
+    b_t_0: numba.float64[::1]  # beam contribution to b_t
+    nabla_a2: numba.float64[::1]  # gradient of laser envelope
+    a2: numba.float64[::1]  # absolute value squared of laser envelope
+    rho: numba.float64[::1]  # charge density
+    chi: numba.float64[::1]  # refractive index
 
     # Temp arrays for field solvers
-    a_i: numba.float64[::1] # b_t
-    b_i: numba.float64[::1] # b_t
-    sum_1: numba.float64[::1] # psi
-    sum_2: numba.float64[::1] # psi
-    sum_3: numba.float64[::1] # dxi_psi
-    a_0: numba.float64[::1] # b_t
-    A: numba.float64[::1] # b_t
-    B: numba.float64[::1] # b_t
-    C: numba.float64[::1] # b_t
-    K: numba.float64[::1] # b_t
-    U: numba.float64[::1] # b_t
+    a_i: numba.float64[::1]  # b_t
+    b_i: numba.float64[::1]  # b_t
+    sum_1: numba.float64[::1]  # psi
+    sum_2: numba.float64[::1]  # psi
+    sum_3: numba.float64[::1]  # dxi_psi
+    a_0: numba.float64[::1]  # b_t
+    A: numba.float64[::1]  # b_t
+    B: numba.float64[::1]  # b_t
+    C: numba.float64[::1]  # b_t
+    K: numba.float64[::1]  # b_t
+    U: numba.float64[::1]  # b_t
 
     # AB2 pusher
-    dr: numba.float64[:, ::1] # last two values of dzeta_r for AB2 pusher
-    dpr: numba.float64[:, ::1] # last two values of dzeta_pr for AB2 pusher
+    dr: numba.float64[:, ::1]  # last two values of dzeta_r for AB2 pusher
+    dpr: numba.float64[:, ::1]  # last two values of dzeta_pr for AB2 pusher
 
     # History arrays, usee the same name as above
     r_hist: numba.float64[:, ::1]
@@ -59,14 +59,14 @@ class PlasmaParticleContainerPy:
     a_i_hist: numba.float64[:, ::1]
     b_i_hist: numba.float64[:, ::1]
     a_0_hist: numba.float64[::1]
-    i_push: int # number of slices pushed
-    xi_current: float # current zeta position
+    i_push: int  # number of slices pushed
+    xi_current: float  # current zeta position
 
     # Flags
-    num_particles: int # number of particles in this species
-    is_ion: bool # is this an ion or electron. Ions don't contribute to b_t and chi
-    do_push: bool # if this particle should be pushed or if it is static
-    store_history: bool # if the full trajectory of the particles should be stored
+    num_particles: int  # number of particles in this species
+    is_ion: bool  # is this an ion or electron. Ions don't contribute to b_t and chi
+    do_push: bool  # if this particle should be pushed or if it is static
+    store_history: bool  # if the full trajectory of the particles should be stored
 
     def __init__(self, serialized_list=None):
         if serialized_list is not None:
