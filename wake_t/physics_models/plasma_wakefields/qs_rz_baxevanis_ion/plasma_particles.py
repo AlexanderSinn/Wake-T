@@ -86,8 +86,8 @@ def pp_initialize(
     num_per_species = r.shape[0]
 
     # Initialize particle arrays.
-    # `q_center` represents the charge until the particle center. That is,
-    # the charge of the first half of the particle.
+    # `w_center` represents the weight until the particle center. That is,
+    # the weight of the first half of the particle.
     pr = np.zeros(num_per_species)
     pz = np.zeros(num_per_species)
     gamma = np.ones(num_per_species)
@@ -109,7 +109,6 @@ def pp_initialize(
 
         # Make copy to avoid multiple species sharing the same array
         s.r = np.copy(r)
-        s.dr_p = np.copy(dr_p)
         s.pr = np.copy(pr)
         s.pz = np.copy(pz)
         s.gamma = np.copy(gamma)

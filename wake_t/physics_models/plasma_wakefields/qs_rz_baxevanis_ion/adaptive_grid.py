@@ -376,7 +376,8 @@ def calculate_fields_on_grid(
         b_theta = bt_grid[i + 2, 2:-2]
 
         add = False
-        for si in range(len(r_hist)):
+        num_species = len(r_hist)
+        for si in range(num_species):
             calculate_psi_with_interpolation(
                 r_eval=r_grid / s_d,
                 r=r_hist[si][j],
@@ -388,7 +389,7 @@ def calculate_fields_on_grid(
             )
             add = True
 
-        for si in range(len(r_hist)):
+        for si in range(num_species):
             if len(a_0_hist[si]) > 0:  # test for electrons
                 calculate_b_theta_with_interpolation(
                     r_fld=r_grid / s_d,

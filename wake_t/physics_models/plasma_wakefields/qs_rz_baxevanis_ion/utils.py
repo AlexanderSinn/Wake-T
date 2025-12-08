@@ -168,9 +168,8 @@ def sort_particle_arrays(s, indices):
     This is probably because of the overhead from calling numba functions.
     """
 
-    a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11 = (
+    a1, a2, a3, a4, a5, a6, a7, a8, a9, a10 = (
         s.r,
-        s.dr_p,
         s.pr,
         s.pz,
         s.gamma,
@@ -192,7 +191,6 @@ def sort_particle_arrays(s, indices):
     a8_orig = np.copy(a8)
     a9_orig = np.copy(a9)
     a10_orig = np.copy(a10)
-    a11_orig = np.copy(a11)
     n_part = indices.shape[0]
     for i in range(n_part):
         i_sort = indices[i]
@@ -205,6 +203,5 @@ def sort_particle_arrays(s, indices):
             a6[i] = a6_orig[i_sort]
             a7[i] = a7_orig[i_sort]
             a8[i] = a8_orig[i_sort]
-            a9[i] = a9_orig[i_sort]
+            a9[:, i] = a9_orig[:, i_sort]
             a10[:, i] = a10_orig[:, i_sort]
-            a11[:, i] = a11_orig[:, i_sort]

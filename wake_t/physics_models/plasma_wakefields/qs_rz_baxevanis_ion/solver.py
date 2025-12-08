@@ -67,7 +67,7 @@ def evolve_one_step(
     pp_serialized_list is passed in as a Tuple[Tuple[np.ndarray]]
     instead of a class so that Numba can cache the JIT compiled function.
 
-    See calculate_wakefields() for parametes.
+    See calculate_wakefields() for parameters.
     """
     ions_computed = False
     pp_species_list = [
