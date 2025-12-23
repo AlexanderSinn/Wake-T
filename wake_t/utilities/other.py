@@ -1,6 +1,7 @@
 """Contains other utilities"""
 
 import sys
+import time
 
 import numpy as np
 
@@ -87,3 +88,65 @@ def radial_gradient(fld, dr):
     n_r = fld.shape[1]
     fld_with_mirror = np.concatenate((fld[:, ::-1], fld), axis=1)
     return np.gradient(fld_with_mirror, dr, axis=1)[:, n_r:]
+
+
+class PerformanceTracker:
+
+    def __init__(self, name):
+        self.name = name
+        self.time_begin = 0.
+        self.time_counter = 0.
+        self.num_calls = 0
+        self.first_time = 0.
+
+    def start(self):
+        self.time_begin = time.time()
+
+    def stop(self):
+        delta = time.time() - self.time_begin
+        if self.num_calls == 0:
+            self.first_time = delta
+        self.time_counter += delta
+        self.num_calls += 1
+
+    def finish(self, total_time):
+        print(f"{self.name:<35} {self.num_calls:>7} " + \
+              f"{1000 * self.time_counter / self.num_calls:>10.04g} ms " + \
+              f"{1000 * self.first_time:>10.04g} ms " + \
+              f"{self.time_counter:>10.04g} s " + \
+              f"{self.time_counter / total_time:>8.02%}")
+
+
+class Profiler(dict):
+
+    def __init__(self, enable):
+        self.enable = enable
+        self.total_begin = time.time()
+
+    def __missing__(self, name):
+        self[name] = PerformanceTracker(name)
+        return self[name]
+
+    def start(self, name):
+        if self.enable:
+            self[name].start()
+
+    def stop(self, name):
+        if self.enable:
+            self[name].stop()
+
+    def finish(self):
+        if self.enable:
+            total_time = time.time() - self.total_begin
+            print(f"\nTotal time: {total_time:.04g} s\n")
+            if len(self) > 0:
+                str = f"{"Name":<35} {"NCalls":>7} {"Avg":>13} {"First":>13} {"Total":>12} {"%":>8}"
+                print(len(str) * "-")
+                print(str)
+                print(len(str) * "-")
+                for p in self.values():
+                    p.finish(total_time)
+                print(len(str) * "-")
+
+    def __del__(self):
+        self.finish()
