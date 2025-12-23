@@ -91,13 +91,12 @@ def radial_gradient(fld, dr):
 
 
 class PerformanceTracker:
-
     def __init__(self, name):
         self.name = name
-        self.time_begin = 0.
-        self.time_counter = 0.
+        self.time_begin = 0.0
+        self.time_counter = 0.0
         self.num_calls = 0
-        self.first_time = 0.
+        self.first_time = 0.0
 
     def start(self):
         self.time_begin = time.time()
@@ -110,15 +109,16 @@ class PerformanceTracker:
         self.num_calls += 1
 
     def finish(self, total_time):
-        print(f"{self.name:<35} {self.num_calls:>7} " + \
-              f"{1000 * self.time_counter / self.num_calls:>10.04g} ms " + \
-              f"{1000 * self.first_time:>10.04g} ms " + \
-              f"{self.time_counter:>10.04g} s " + \
-              f"{self.time_counter / total_time:>8.02%}")
+        print(
+            f"{self.name:<35} {self.num_calls:>7} "
+            + f"{1000 * self.time_counter / self.num_calls:>10.04g} ms "
+            + f"{1000 * self.first_time:>10.04g} ms "
+            + f"{self.time_counter:>10.04g} s "
+            + f"{self.time_counter / total_time:>8.02%}"
+        )
 
 
 class Profiler(dict):
-
     def __init__(self, enable):
         self.enable = enable
         self.total_begin = time.time()
@@ -140,7 +140,7 @@ class Profiler(dict):
             total_time = time.time() - self.total_begin
             print(f"\nTotal time: {total_time:.04g} s\n")
             if len(self) > 0:
-                str = f"{"Name":<35} {"NCalls":>7} {"Avg":>13} {"First":>13} {"Total":>12} {"%":>8}"
+                str = f"{'Name':<35} {'NCalls':>7} {'Avg':>13} {'First':>13} {'Total':>12} {'%':>8}"
                 print(len(str) * "-")
                 print(str)
                 print(len(str) * "-")

@@ -211,7 +211,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         adaptive_grid_r_max: Optional[Union[float, List[float]]] = None,
         adaptive_grid_r_lim: Optional[Union[float, List[float]]] = None,
         adaptive_grid_diags: Optional[List[str]] = ["E", "B"],
-        performance_profiling = False,
+        performance_profiling=False,
     ) -> None:
         # Checks for backward compatibility.
         if plasma_pusher not in ["ab2"]:
@@ -482,7 +482,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             store_plasma_history=store_plasma_history,
             calculate_rho=calculate_rho,
             particle_diags=self.particle_diags,
-            profiler=self.prof
+            profiler=self.prof,
         )
 
         self.prof.start("calculate_rho")
