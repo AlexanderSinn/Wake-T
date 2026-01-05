@@ -120,7 +120,6 @@ class PerformanceTracker:
 
 
 class Profiler(dict):
-
     def __init__(self):
         self.enable = False
 
@@ -152,12 +151,9 @@ class Profiler(dict):
             total_time = time.time() - self.total_begin
             print(f"\nTotal time: {total_time:.04g} s\n")
             if len(self) > 0:
-
                 table = [p.finish(total_time) for p in self.values()]
                 table.sort(key=lambda x: float(x[-2][:-2]), reverse=True)
-                table.insert(0,
-                    ('Name', 'NCalls', 'Avg', 'First', 'Total', '%')
-                )
+                table.insert(0, ("Name", "NCalls", "Avg", "First", "Total", "%"))
 
                 num_chars = np.zeros(len(table[0]), dtype=np.int64)
 
@@ -167,25 +163,33 @@ class Profiler(dict):
 
                 num_chars += 2
 
-                print(np.sum(num_chars) * '-')
+                print(np.sum(num_chars) * "-")
                 for i in range(len(table[0])):
-                    print(f"{table[0][i]:{"<" if i == 0 else ">"}{num_chars[i]}}", end="")
+                    print(
+                        f"{table[0][i]:{'<' if i == 0 else '>'}{num_chars[i]}}", end=""
+                    )
                 print()
-                print(np.sum(num_chars) * '-')
+                print(np.sum(num_chars) * "-")
                 for j in range(1, len(table)):
                     for i in range(len(table[j])):
-                        print(f"{table[j][i]:{"<" if i == 0 else ">"}{num_chars[i]}}", end="")
+                        print(
+                            f"{table[j][i]:{'<' if i == 0 else '>'}{num_chars[i]}}",
+                            end="",
+                        )
                     print()
-                print(np.sum(num_chars) * '-')
+                print(np.sum(num_chars) * "-")
 
 
 _global_profiler = Profiler()
 
+
 def Profiling():
     return _global_profiler
 
+
 def ProfStart(name):
     _global_profiler.start(name)
+
 
 def ProfStop(name):
     _global_profiler.stop(name)
