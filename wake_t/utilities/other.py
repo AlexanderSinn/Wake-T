@@ -90,7 +90,7 @@ def radial_gradient(fld, dr):
     return np.gradient(fld_with_mirror, dr, axis=1)[:, n_r:]
 
 
-class PerformanceTracker:
+class ProfileRange:
     def __init__(self, name):
         self.name = name
         self.time_begin = time.time()
@@ -108,7 +108,7 @@ class PerformanceTracker:
         self.time_counter += delta
         self.num_calls += 1
 
-    def finish(self, total_time):
+    def get_results(self, total_time):
         return (
             self.name,
             f"{self.num_calls}",
@@ -123,20 +123,19 @@ class Profiler(dict):
     def __init__(self):
         self.enable = False
 
-    def initialize(self):
+    def __missing__(self, name):
+        self[name] = ProfileRange(name)
+        return self[name]
+
+    def __enter__(self):
         self.clear()
         self.enable = True
         self.total_begin = time.time()
 
-    def __missing__(self, name):
-        self[name] = PerformanceTracker(name)
-        return self[name]
-
-    def __enter__(self):
-        self.initialize()
-
     def __exit__(self, *args):
-        self.finish()
+        self.print_results()
+        self.clear()
+        self.enable = False
 
     def start(self, name):
         if self.enable:
@@ -146,12 +145,12 @@ class Profiler(dict):
         if self.enable:
             self[name].stop()
 
-    def finish(self):
+    def print_results(self):
         if self.enable:
             total_time = time.time() - self.total_begin
             print(f"\nTotal time: {total_time:.04g} s\n")
             if len(self) > 0:
-                table = [p.finish(total_time) for p in self.values()]
+                table = [p.get_results(total_time) for p in self.values()]
                 table.sort(key=lambda x: float(x[-2][:-2]), reverse=True)
                 table.insert(0, ("Name", "NCalls", "Avg", "First", "Total", "%"))
 
@@ -164,19 +163,15 @@ class Profiler(dict):
                 num_chars += 2
 
                 print(np.sum(num_chars) * "-")
-                for i in range(len(table[0])):
-                    print(
-                        f"{table[0][i]:{'<' if i == 0 else '>'}{num_chars[i]}}", end=""
-                    )
-                print()
-                print(np.sum(num_chars) * "-")
-                for j in range(1, len(table)):
+                for j in range(len(table)):
                     for i in range(len(table[j])):
                         print(
                             f"{table[j][i]:{'<' if i == 0 else '>'}{num_chars[i]}}",
                             end="",
                         )
                     print()
+                    if j == 0:
+                        print(np.sum(num_chars) * "-")
                 print(np.sum(num_chars) * "-")
 
 
