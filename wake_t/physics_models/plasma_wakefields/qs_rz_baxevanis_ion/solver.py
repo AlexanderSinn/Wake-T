@@ -28,6 +28,7 @@ from .plasma_particles import (
 from .utils import longitudinal_gradient, radial_gradient
 
 from wake_t.utilities.numba import njit_serial
+from wake_t.utilities.other import ProfStart, ProfStop
 
 from .plasma_particle_container import PlasmaParticleContainer
 
@@ -289,7 +290,7 @@ def calculate_wakefields(
         },
     ]
 
-    profiler.start("pp_initialize")
+    ProfStart("wakefield.initialize")
 
     species_list = pp_initialize(
         init_list,
@@ -302,9 +303,9 @@ def calculate_wakefields(
         plasma_pusher,
     )
 
-    profiler.stop("pp_initialize")
+    ProfStop("wakefield.initialize")
 
-    profiler.start("evolve_one_step")
+    ProfStart("wakefield.evolve")
 
     evolve_one_step(
         tuple(s.serialize() for s in species_list),
@@ -333,7 +334,7 @@ def calculate_wakefields(
         tuple(particle_diags),
     )
 
-    profiler.stop("evolve_one_step")
+    ProfStop("wakefield.evolve")
 
     # Calculate derived fields (E_z, W_r, and E_r).
     E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p * 1e-6)

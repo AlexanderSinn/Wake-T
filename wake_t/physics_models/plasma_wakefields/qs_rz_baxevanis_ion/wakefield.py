@@ -14,7 +14,7 @@ from wake_t.fields.rz_wakefield import RZWakefield
 from wake_t.physics_models.laser.laser_pulse import LaserPulse
 from wake_t.particles.particle_bunch import ParticleBunch
 from wake_t.particles.interpolation import gather_main_fields_cyl_linear
-from wake_t.utilities.other import Profiler
+from wake_t.utilities.other import ProfStart, ProfStop
 
 
 class Quasistatic2DWakefieldIon(RZWakefield):
@@ -211,7 +211,6 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         adaptive_grid_r_max: Optional[Union[float, List[float]]] = None,
         adaptive_grid_r_lim: Optional[Union[float, List[float]]] = None,
         adaptive_grid_diags: Optional[List[str]] = ["E", "B"],
-        performance_profiling=False,
     ) -> None:
         # Checks for backward compatibility.
         if plasma_pusher not in ["ab2"]:
@@ -259,7 +258,6 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         if len(self.ppc.shape) in [0, 1]:
             self.ppc = np.array([[self.r_max_plasma, self.ppc.flatten()[0]]])
         self.parabolic_coefficient = parabolic_coefficient
-        self.prof = Profiler(performance_profiling)
 
         super().__init__(
             density_function=density_function,
@@ -304,14 +302,12 @@ class Quasistatic2DWakefieldIon(RZWakefield):
 
         # Get square of laser envelope
         if self.laser is not None:
-            self.prof.start("calculate_laser_a2")
             calculate_laser_a2(self.laser.get_envelope(), self.laser_a2)
             # If linearly polarized, divide by 2 so that the ponderomotive
             # force on the plasma particles is correct.
             if self.laser.polarization == "linear":
                 self.laser_a2 /= 2.0
             laser_a2 = self.laser_a2
-            self.prof.stop("calculate_laser_a2")
         else:
             laser_a2 = None
 
@@ -328,7 +324,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         s_d = ge.plasma_skin_depth(self.n_p * 1e-6)
         deposit_outliers_on_base_grid = False
         if self.use_adaptive_grids:
-            self.prof.start("adaptive_grids.deposit_bunch")
+            ProfStart("adaptive_grids.deposit_bunch")
 
             store_plasma_history = True
             # Get radial grid resolution.
@@ -416,12 +412,11 @@ class Quasistatic2DWakefieldIon(RZWakefield):
                         r_min_deposit=grid.r_max,
                     )
                     deposit_outliers_on_base_grid = True
-            self.prof.stop("adaptive_grids.deposit_bunch")
+            ProfStop("adaptive_grids.deposit_bunch")
         else:
             bunches_without_grid = bunches
         # If not using adaptive grids, add all sources to the same array.
         if bunches_without_grid or deposit_outliers_on_base_grid:
-            self.prof.start("deposit_bunch_charge")
             self._reset_bunch_arrays()
             for bunch in bunches_without_grid:
                 deposit_bunch_charge(
@@ -452,7 +447,6 @@ class Quasistatic2DWakefieldIon(RZWakefield):
                 )
                 / s_d
             )
-            self.prof.stop("deposit_bunch_charge")
 
         # Calculate rho only if requested in the diagnostics.
         calculate_rho = any("rho" in diag for diag in self.field_diags)
@@ -482,26 +476,17 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             store_plasma_history=store_plasma_history,
             calculate_rho=calculate_rho,
             particle_diags=self.particle_diags,
-            profiler=self.prof,
         )
-
-        self.prof.start("calculate_rho")
 
         # Add bunch density to total density.
         if calculate_rho:
             rho_bunch = -self.q_bunch[2:-2, 2:-2] / (self.r_fld / s_d)
             self.rho[2:-2, 2:-2] += rho_bunch
 
-        self.prof.stop("calculate_rho")
-
-        self.prof.start("adaptive_grid.calculate_fields")
-
         # Calculate fields on adaptive grids.
         if self.use_adaptive_grids:
             for _, grid in self.bunch_grids.items():
                 grid.calculate_fields(self.n_p, self.pp)
-
-        self.prof.stop("adaptive_grid.calculate_fields")
 
     def _reset_bunch_arrays(self):
         """Reset to zero the bunch arrays of the base grid."""

@@ -93,7 +93,7 @@ def radial_gradient(fld, dr):
 class PerformanceTracker:
     def __init__(self, name):
         self.name = name
-        self.time_begin = 0.0
+        self.time_begin = time.time()
         self.time_counter = 0.0
         self.num_calls = 0
         self.first_time = 0.0
@@ -109,23 +109,35 @@ class PerformanceTracker:
         self.num_calls += 1
 
     def finish(self, total_time):
-        print(
-            f"{self.name:<35} {self.num_calls:>7} "
-            + f"{1000 * self.time_counter / self.num_calls:>10.04g} ms "
-            + f"{1000 * self.first_time:>10.04g} ms "
-            + f"{self.time_counter:>10.04g} s "
-            + f"{self.time_counter / total_time:>8.02%}"
+        return (
+            self.name,
+            f"{self.num_calls}",
+            f"{1000 * self.time_counter / self.num_calls:.04g} ms",
+            f"{1000 * self.first_time:.04g} ms",
+            f"{self.time_counter:.04g} s",
+            f"{self.time_counter / total_time:.02%}",
         )
 
 
 class Profiler(dict):
-    def __init__(self, enable):
-        self.enable = enable
+
+    def __init__(self):
+        self.enable = False
+
+    def initialize(self):
+        self.clear()
+        self.enable = True
         self.total_begin = time.time()
 
     def __missing__(self, name):
         self[name] = PerformanceTracker(name)
         return self[name]
+
+    def __enter__(self):
+        self.initialize()
+
+    def __exit__(self, *args):
+        self.finish()
 
     def start(self, name):
         if self.enable:
@@ -140,13 +152,40 @@ class Profiler(dict):
             total_time = time.time() - self.total_begin
             print(f"\nTotal time: {total_time:.04g} s\n")
             if len(self) > 0:
-                str = f"{'Name':<35} {'NCalls':>7} {'Avg':>13} {'First':>13} {'Total':>12} {'%':>8}"
-                print(len(str) * "-")
-                print(str)
-                print(len(str) * "-")
-                for p in self.values():
-                    p.finish(total_time)
-                print(len(str) * "-")
 
-    def __del__(self):
-        self.finish()
+                table = [p.finish(total_time) for p in self.values()]
+                table.sort(key=lambda x: float(x[-2][:-2]), reverse=True)
+                table.insert(0,
+                    ('Name', 'NCalls', 'Avg', 'First', 'Total', '%')
+                )
+
+                num_chars = np.zeros(len(table[0]), dtype=np.int64)
+
+                for row in table:
+                    for i in range(len(row)):
+                        num_chars[i] = max(num_chars[i], len(row[i]))
+
+                num_chars += 2
+
+                print(np.sum(num_chars) * '-')
+                for i in range(len(table[0])):
+                    print(f"{table[0][i]:{"<" if i == 0 else ">"}{num_chars[i]}}", end="")
+                print()
+                print(np.sum(num_chars) * '-')
+                for j in range(1, len(table)):
+                    for i in range(len(table[j])):
+                        print(f"{table[j][i]:{"<" if i == 0 else ">"}{num_chars[i]}}", end="")
+                    print()
+                print(np.sum(num_chars) * '-')
+
+
+_global_profiler = Profiler()
+
+def Profiling():
+    return _global_profiler
+
+def ProfStart(name):
+    _global_profiler.start(name)
+
+def ProfStop(name):
+    _global_profiler.stop(name)
