@@ -136,4 +136,4 @@ class LaserStaticPlasma(RZWakefield):
         gamma_elec = 0.5 * (2 + a_env**2)
         # Convert to normalized units
         self.rho[2:-2, 2:-2] = (density_elec / self.n_p) * gamma_elec
-        self.chi[2:-2, 2:-2] = (density_elec / self.n_p)
+        self.chi[2:-2, 2:-2] = density_elec / self.n_p

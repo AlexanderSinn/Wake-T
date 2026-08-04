@@ -10,6 +10,7 @@ from wake_t.physics_models.laser.utils import unwrap
 
 tests_output_folder = "./tests_output"
 
+
 def test_laser_static_plasma_gaussian_in_vacuum(plot=False):
     """Test evolution of Gaussian laser pulse in vacuum.
 
@@ -18,7 +19,9 @@ def test_laser_static_plasma_gaussian_in_vacuum(plot=False):
     the final value of the sum of `a_mod` has not changed.
     """
     # Diagnostics directory.
-    test_dir = os.path.join(tests_output_folder, "test_laser_static_plasma_gaussian_in_vacuum")
+    test_dir = os.path.join(
+        tests_output_folder, "test_laser_static_plasma_gaussian_in_vacuum"
+    )
     diag_dir = os.path.join(test_dir, "diags")
 
     # Grid properties.
@@ -49,7 +52,7 @@ def test_laser_static_plasma_gaussian_in_vacuum(plot=False):
 
     plasma = PlasmaStage(
         length=z_tot,
-        density=0.,
+        density=0.0,
         wakefield_model="laser_static_plasma",
         n_out=n_out,
         laser=laser,
@@ -59,8 +62,8 @@ def test_laser_static_plasma_gaussian_in_vacuum(plot=False):
         xi_max=xi_max,
         n_r=nr,
         n_xi=nxi,
-        dz_fields= z_tot / nt,
-        field_diags=["rho", "a", "chi"]
+        dz_fields=z_tot / nt,
+        field_diags=["rho", "a", "chi"],
     )
 
     plasma.track(opmd_diag=True, diag_dir=diag_dir)
@@ -81,7 +84,6 @@ def test_laser_static_plasma_gaussian_in_vacuum(plot=False):
     rayleigh_length = ct.pi * w_0**2 / l_0
     laser_w_an = w_0 * np.sqrt(1 + ((z - z_foc) / rayleigh_length) ** 2)
     laser_a_an = a_0 / np.sqrt(1 + ((z - z_foc) / rayleigh_length) ** 2)
-
 
     # Check that evolution is as expected.
     diff_w = np.max(np.abs(laser_w - laser_w_an) / laser_w_an)
@@ -116,7 +118,9 @@ def test_laser_static_plasma_gaussian_in_vacuum_with_subgrid(plot=False):
     the dimensions of the envelope arrays are as expected when using a subgrid.
     """
     # Diagnostics directory.
-    test_dir = os.path.join(tests_output_folder, "test_laser_static_plasma_gaussian_in_vacuum_with_subgrid")
+    test_dir = os.path.join(
+        tests_output_folder, "test_laser_static_plasma_gaussian_in_vacuum_with_subgrid"
+    )
     diag_dir = os.path.join(test_dir, "diags")
 
     # Grid properties.
@@ -151,7 +155,7 @@ def test_laser_static_plasma_gaussian_in_vacuum_with_subgrid(plot=False):
 
     plasma = PlasmaStage(
         length=z_tot,
-        density=0.,
+        density=0.0,
         wakefield_model="laser_static_plasma",
         n_out=n_out,
         laser=laser,
@@ -161,11 +165,11 @@ def test_laser_static_plasma_gaussian_in_vacuum_with_subgrid(plot=False):
         xi_max=xi_max,
         n_r=nr,
         n_xi=nxi,
-        dz_fields= z_tot / nt,
+        dz_fields=z_tot / nt,
         laser_envelope_substeps=2,
         laser_envelope_nxi=subgrid_nxi,
         laser_envelope_nr=subgrid_nr,
-        field_diags=["rho", "a", "chi"]
+        field_diags=["rho", "a", "chi"],
     )
 
     plasma.track(opmd_diag=True, diag_dir=diag_dir)
@@ -186,7 +190,6 @@ def test_laser_static_plasma_gaussian_in_vacuum_with_subgrid(plot=False):
     rayleigh_length = ct.pi * w_0**2 / l_0
     laser_w_an = w_0 * np.sqrt(1 + ((z - z_foc) / rayleigh_length) ** 2)
     laser_a_an = a_0 / np.sqrt(1 + ((z - z_foc) / rayleigh_length) ** 2)
-
 
     # Check that evolution is as expected.
     diff_w = np.max(np.abs(laser_w - laser_w_an) / laser_w_an)
@@ -214,7 +217,7 @@ def test_laser_static_plasma_gaussian_in_vacuum_with_subgrid(plot=False):
 
 def calculate_spot_size(a_env, dr):
     # Project envelope to r
-    a_env = a_env[a_env.shape[0]//2:,:].T
+    a_env = a_env[a_env.shape[0] // 2 :, :].T
 
     a_proj = np.sum(np.abs(a_env), axis=0)
 

@@ -296,7 +296,9 @@ class RZWakefield(NumericalField):
                 fld_names += ["chi"]
                 fld_comps += [None]
                 fld_attrs += [{}]
-                fld_arrays += [[np.ascontiguousarray(self.chi.T[2:-2, 2:-2]) * chi_norm]]
+                fld_arrays += [
+                    [np.ascontiguousarray(self.chi.T[2:-2, 2:-2]) * chi_norm]
+                ]
 
         fld_comp_pos = [fld_position] * len(fld_names)
 
