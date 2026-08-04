@@ -89,9 +89,9 @@ def test_laser_static_plasma_gaussian_in_vacuum(plot=False):
     diff_a = np.max(np.abs(laser_a - laser_a_an) / laser_a_an)
 
     if diff_a >= 1e-3:
-        raise AssertionError(f'diff_a ({diff_a}) >= 1e-3')
+        raise AssertionError(f"diff_a ({diff_a}) >= 1e-3")
     if diff_w >= 1e-3:
-        raise AssertionError(f'diff_w ({diff_w}) >= 1e-3')
+        raise AssertionError(f"diff_w ({diff_w}) >= 1e-3")
 
     # Check that solution hasn't changed.
     a_mod = np.abs(a_env)
@@ -197,9 +197,9 @@ def test_laser_static_plasma_gaussian_in_vacuum_with_subgrid(plot=False):
     diff_a = np.max(np.abs(laser_a - laser_a_an) / laser_a_an)
 
     if diff_a >= 1e-3:
-        raise AssertionError(f'diff_a ({diff_a}) >= 1e-3')
+        raise AssertionError(f"diff_a ({diff_a}) >= 1e-3")
     if diff_w >= 1e-3:
-        raise AssertionError(f'diff_w ({diff_w}) >= 1e-3')
+        raise AssertionError(f"diff_w ({diff_w}) >= 1e-3")
 
     # Check that solution hasn't changed.
     a_mod = np.abs(a_env)

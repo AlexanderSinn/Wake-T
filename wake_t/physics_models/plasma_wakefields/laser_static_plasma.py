@@ -93,7 +93,9 @@ class LaserStaticPlasma(RZWakefield):
         laser_envelope_nxi: Optional[int] = None,
         laser_envelope_nr: Optional[int] = None,
         laser_envelope_use_phase: Optional[bool] = True,
-        field_diags: Optional[List[str]] = (lambda: ["rho", "chi", "a_mod", "a_phase", "a"])(),
+        field_diags: Optional[List[str]] = (
+            lambda: ["rho", "chi", "a_mod", "a_phase", "a"]
+        )(),
     ) -> None:
         super().__init__(
             density_function=density_function,
