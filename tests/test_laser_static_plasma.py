@@ -5,7 +5,6 @@ import scipy.constants as ct
 import matplotlib.pyplot as plt
 from openpmd_viewer import OpenPMDTimeSeries
 from wake_t import PlasmaStage, GaussianPulse
-from wake_t.physics_models.laser.utils import unwrap
 
 
 tests_output_folder = "./tests_output"
