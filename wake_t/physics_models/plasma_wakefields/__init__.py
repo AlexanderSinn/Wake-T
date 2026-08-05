@@ -16,5 +16,5 @@ __all__ = [
     "FocusingBlowoutField",
     "Quasistatic2DWakefieldIon",
     "LaserStaticPlasma",
-    "LaserGridIonization"
+    "LaserGridIonization",
 ]

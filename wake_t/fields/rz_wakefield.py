@@ -308,13 +308,15 @@ class RZWakefield(NumericalField):
                         fld_comps += [None]
                         fld_attrs += [{}]
                         fld_arrays += [
-                            [np.ascontiguousarray(self.ion_densities[
-                                self.ion_start_index[i] + j,
-                                2:-2,
-                                2:-2
-                            ].T) * self.n_p]
+                            [
+                                np.ascontiguousarray(
+                                    self.ion_densities[
+                                        self.ion_start_index[i] + j, 2:-2, 2:-2
+                                    ].T
+                                )
+                                * self.n_p
+                            ]
                         ]
-
 
         fld_comp_pos = [fld_position] * len(fld_names)
 

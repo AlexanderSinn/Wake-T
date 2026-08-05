@@ -25,46 +25,51 @@ def do_grid_ionization(
     is_linear_pol,
     n_xi,
     n_r,
-    d_zeta_inv
+    d_zeta_inv,
 ):
     for i_s in range(num_ion_species):
         ion_density = ion_densities[
-            ion_start_index[i_s]:
-            (ion_start_index[i_s] + ion_atomic_number[i_s] + 1),
+            ion_start_index[i_s] : (ion_start_index[i_s] + ion_atomic_number[i_s] + 1),
             2:-1,
-            2:-2
+            2:-2,
         ]
         chi_factor_ion = ct.m_e / ion_mass[i_s]
         is_last_plasma = i_s + 1 == num_ion_species
         max_ion_lev = ion_atomic_number[i_s]
 
-        for i_zeta in range(n_xi -1, -1, -1):
+        for i_zeta in range(n_xi - 1, -1, -1):
             for i_r in range(n_r):
-
                 Et = 1j * a_env[i_zeta, i_r] * omega0
                 if i_zeta + 1 < n_xi:
-                    Et += (a_env[i_zeta + 1, i_r] - a_env[i_zeta, i_r]) * ct.c * d_zeta_inv
-                Ep = np.sqrt(np.abs(Et*Et))
+                    Et += (
+                        (a_env[i_zeta + 1, i_r] - a_env[i_zeta, i_r])
+                        * ct.c
+                        * d_zeta_inv
+                    )
+                Ep = np.sqrt(np.abs(Et * Et))
                 Ep *= ct.m_e * ct.c / ct.e
 
                 chi = 0
 
                 for ion_lev in range(max_ion_lev):
-
                     p = 0
-                    if (Ep > 1e-30):
-                        w_dtau_dc = adk_prefactors[i_s, ion_lev, 1] * \
-                            np.pow(Ep, adk_prefactors[i_s, ion_lev, 0]) * \
-                            np.exp(adk_prefactors[i_s, ion_lev, 2] / Ep)
+                    if Ep > 1e-30:
+                        w_dtau_dc = (
+                            adk_prefactors[i_s, ion_lev, 1]
+                            * np.pow(Ep, adk_prefactors[i_s, ion_lev, 0])
+                            * np.exp(adk_prefactors[i_s, ion_lev, 2] / Ep)
+                        )
 
                         w_dtau_ac = w_dtau_dc
                         if is_linear_pol:
                             w_dtau_ac *= np.sqrt(Ep * adk_prefactors[i_s, ion_lev, 3])
 
-                        p = 1 - np.exp(- w_dtau_ac)
+                        p = 1 - np.exp(-w_dtau_ac)
 
-                    old_weight = ion_density[ion_lev, i_zeta, i_r] + \
-                        ion_density[ion_lev, i_zeta + 1, i_r]
+                    old_weight = (
+                        ion_density[ion_lev, i_zeta, i_r]
+                        + ion_density[ion_lev, i_zeta + 1, i_r]
+                    )
                     transferred_weight = old_weight * p
                     new_weight = old_weight - transferred_weight
 
@@ -75,8 +80,12 @@ def do_grid_ionization(
                     ion_density[ion_lev + 1, i_zeta, i_r] += transferred_weight
                     elec_density[i_zeta, i_r] += transferred_weight
 
-                chi += ion_density[max_ion_lev, i_zeta, i_r] * \
-                    chi_factor_ion * max_ion_lev * max_ion_lev
+                chi += (
+                    ion_density[max_ion_lev, i_zeta, i_r]
+                    * chi_factor_ion
+                    * max_ion_lev
+                    * max_ion_lev
+                )
 
                 if is_last_plasma:
                     elec_density[i_zeta, i_r] += elec_density[i_zeta + 1, i_r]
@@ -209,28 +218,46 @@ class LaserGridIonization(RZWakefield):
         self.r_max_plasma = r_max_plasma
 
         ion_species_lookup = {
-            "H" : {
-                "mass_u" : 1.007975,
-                "ionization_energy_eV" : [13.59843449]
+            "H": {"mass_u": 1.007975, "ionization_energy_eV": [13.59843449]},
+            "He": {
+                "mass_u": 4.002602,
+                "ionization_energy_eV": [24.58738880, 54.4177650],
             },
-            "He" : {
-                "mass_u" : 4.002602,
-                "ionization_energy_eV" : [24.58738880, 54.4177650]
+            "N": {
+                "mass_u": 14.006855,
+                "ionization_energy_eV": [
+                    14.53413,
+                    29.60125,
+                    47.4453,
+                    77.4735,
+                    97.8901,
+                    552.06732,
+                    67.046116,
+                ],
             },
-            "N" : {
-                "mass_u" : 14.006855,
-                "ionization_energy_eV" : [
-                    14.53413, 29.60125, 47.4453, 77.4735, 97.8901, 552.06732, 67.046116
-                ]
+            "Ar": {
+                "mass_u": 39.948,
+                "ionization_energy_eV": [
+                    15.7596117,
+                    27.62967,
+                    40.735,
+                    59.58,
+                    74.84,
+                    91.290,
+                    124.41,
+                    143.4567,
+                    422.60,
+                    479.76,
+                    540.4,
+                    619.0,
+                    685.5,
+                    755.13,
+                    855.5,
+                    918.375,
+                    4120.6656,
+                    4426.2228,
+                ],
             },
-            "Ar" : {
-                "mass_u" : 39.948,
-                "ionization_energy_eV" : [
-                    15.7596117, 27.62967, 40.735, 59.58, 74.84, 91.290, 124.41, 143.4567,
-                    422.60, 479.76, 540.4, 619.0, 685.5, 755.13, 855.5, 918.375,
-                    4120.6656, 4426.2228
-                ]
-            }
         }
 
         if not isinstance(ion_species, list):
@@ -251,19 +278,25 @@ class LaserGridIonization(RZWakefield):
                 self.ion_species.append(ion_species_lookup[species])
                 name = species
             else:
-                if not isinstance(species, dict) or species.keys() != ion_species_lookup['He'].keys():
+                if (
+                    not isinstance(species, dict)
+                    or species.keys() != ion_species_lookup["He"].keys()
+                ):
                     raise ValueError(
                         f"ion_species {species} must be str or dict like {ion_species_lookup['He']}"
                     )
                 self.ion_species.append(species)
                 name = "Ion"
             prev_name_cout = self.ion_names.count(name)
-            self.ion_names.append(name if prev_name_cout == 0 else name + str(prev_name_cout))
+            self.ion_names.append(
+                name if prev_name_cout == 0 else name + str(prev_name_cout)
+            )
 
         self.initial_ion_densities = []
 
         for density in ion_densities:
             if isinstance(density, float):
+
                 def uniform_density(z, r, density=density):
                     return np.ones_like(z) * np.ones_like(r) * density
 
@@ -271,41 +304,68 @@ class LaserGridIonization(RZWakefield):
             elif callable(density):
                 self.initial_ion_densities.append(density)
             else:
-                raise ValueError(f"Type {type(density)} of {density} not supported for ion density.")
+                raise ValueError(
+                    f"Type {type(density)} of {density} not supported for ion density."
+                )
 
-        self.ion_mass = np.array([
-            species["mass_u"] * ct.u for species in self.ion_species
-        ])
+        self.ion_mass = np.array(
+            [species["mass_u"] * ct.u for species in self.ion_species]
+        )
 
-        self.ion_atomic_number = np.array([
-            len(species["ionization_energy_eV"]) for species in self.ion_species
-        ])
+        self.ion_atomic_number = np.array(
+            [len(species["ionization_energy_eV"]) for species in self.ion_species]
+        )
 
-        self.adk_prefactors = np.zeros((len(self.ion_atomic_number), np.max(self.ion_atomic_number), 4))
+        self.adk_prefactors = np.zeros(
+            (len(self.ion_atomic_number), np.max(self.ion_atomic_number), 4)
+        )
 
         for i, species in enumerate(self.ion_species):
-
-            wa = ct.alpha**3 * ct.c / ct.physical_constants["classical electron radius"][0]
-            Ea = ct.m_e * ct.c * ct.c / ct.e * ct.alpha**4 / ct.physical_constants["classical electron radius"][0]
+            wa = (
+                ct.alpha**3
+                * ct.c
+                / ct.physical_constants["classical electron radius"][0]
+            )
+            Ea = (
+                ct.m_e
+                * ct.c
+                * ct.c
+                / ct.e
+                * ct.alpha**4
+                / ct.physical_constants["classical electron radius"][0]
+            )
             UH = ion_species_lookup["H"]["ionization_energy_eV"][0]
             l_eff = np.sqrt(UH / species["ionization_energy_eV"][0]) - 1.0
             dt = (xi_max - xi_min) / (n_xi * ct.c)
 
             for j in range(self.ion_atomic_number[i]):
                 Uion = species["ionization_energy_eV"][j]
-                n_eff = (j+1) * np.sqrt(UH / Uion)
-                C2 = np.pow(2, 2 * n_eff) / (n_eff * math.gamma(n_eff + l_eff + 1.0)
-                    * math.gamma(n_eff - l_eff))
+                n_eff = (j + 1) * np.sqrt(UH / Uion)
+                C2 = np.pow(2, 2 * n_eff) / (
+                    n_eff * math.gamma(n_eff + l_eff + 1.0) * math.gamma(n_eff - l_eff)
+                )
                 self.adk_prefactors[i, j, 0] = -(2.0 * n_eff - 1.0)
-                self.adk_prefactors[i, j, 1] = dt * wa * C2 * (Uion / (2.0 * UH)) \
-                    * np.pow(2 * np.pow(Uion/UH, 3.0/2.0)*Ea, 2*n_eff-1)
-                self.adk_prefactors[i, j, 2] = -2.0/3.0 * np.pow(Uion/UH, 3.0/2.0) * Ea
-                self.adk_prefactors[i, j, 3] = (3.0 / ct.pi) * np.pow(Uion/UH, -3.0/2.0) / Ea
+                self.adk_prefactors[i, j, 1] = (
+                    dt
+                    * wa
+                    * C2
+                    * (Uion / (2.0 * UH))
+                    * np.pow(2 * np.pow(Uion / UH, 3.0 / 2.0) * Ea, 2 * n_eff - 1)
+                )
+                self.adk_prefactors[i, j, 2] = (
+                    -2.0 / 3.0 * np.pow(Uion / UH, 3.0 / 2.0) * Ea
+                )
+                self.adk_prefactors[i, j, 3] = (
+                    (3.0 / ct.pi) * np.pow(Uion / UH, -3.0 / 2.0) / Ea
+                )
 
-        self.ion_start_index = np.cumsum(self.ion_atomic_number + 1) - self.ion_atomic_number - 1
-        self.ion_densities = np.zeros((np.sum(self.ion_atomic_number + 1), self.n_xi + 4, self.n_r + 4))
+        self.ion_start_index = (
+            np.cumsum(self.ion_atomic_number + 1) - self.ion_atomic_number - 1
+        )
+        self.ion_densities = np.zeros(
+            (np.sum(self.ion_atomic_number + 1), self.n_xi + 4, self.n_r + 4)
+        )
         self.elec_density = np.zeros((self.n_xi + 4, self.n_r + 4))
-
 
     def _calculate_wakefield(self, bunches):
 
@@ -315,7 +375,7 @@ class LaserGridIonization(RZWakefield):
         self.n_p = 1e23
 
         if self.laser is None:
-             raise ValueError(f"Must use a laser with LaserGridIonization.")
+            raise ValueError(f"Must use a laser with LaserGridIonization.")
 
         # Get laser envelope
         a_env = self.laser.get_envelope()
@@ -334,14 +394,13 @@ class LaserGridIonization(RZWakefield):
             density_ion = density(self.t * ct.c, self.r_fld)
             if self.r_max_plasma is not None:
                 density_ion = np.where(self.r_fld > self.r_max_plasma, 0, density_ion)
-            self.ion_densities[self.ion_start_index[i], -2, 2:-2] = density_ion / self.n_p
+            self.ion_densities[self.ion_start_index[i], -2, 2:-2] = (
+                density_ion / self.n_p
+            )
 
         omega0 = 2 * ct.pi * ct.c / self.laser.l_0
 
-        elec_density = self.elec_density[
-            2:-1,
-            2:-2
-        ]
+        elec_density = self.elec_density[2:-1, 2:-2]
 
         do_grid_ionization(
             len(self.ion_species),
@@ -357,23 +416,20 @@ class LaserGridIonization(RZWakefield):
             is_linear_pol,
             self.n_xi,
             self.n_r,
-            1 / np.abs(self.xi_fld[1] - self.xi_fld[0])
+            1 / np.abs(self.xi_fld[1] - self.xi_fld[0]),
         )
 
         if self.species_rho_diags:
             # Gamma for particles with no momentum but that see a laser
             # If linearly polarized, divide by 2 so that the
             # ponderomotive force on the plasma particles is correct.
-            gamma_elec = 0.5 * (2 + np.abs(a_env)**2 * (0.5 if is_linear_pol else 1))
+            gamma_elec = 0.5 * (2 + np.abs(a_env) ** 2 * (0.5 if is_linear_pol else 1))
             self.rho_e[2:-2, 2:-2] = self.elec_density[2:-2, 2:-2] * gamma_elec
 
             for i in range(len(self.ion_atomic_number)):
                 for j in range(self.ion_atomic_number[i] + 1):
-                    self.rho_i[2:-2, 2:-2] -= j * self.ion_densities[
-                        self.ion_start_index[i] + j,
-                        2:-2,
-                        2:-2
-                    ]
+                    self.rho_i[2:-2, 2:-2] -= (
+                        j * self.ion_densities[self.ion_start_index[i] + j, 2:-2, 2:-2]
+                    )
 
         ProfStop("LaserGridIonization")
-
