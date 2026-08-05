@@ -375,7 +375,7 @@ class LaserGridIonization(RZWakefield):
         self.n_p = 1e23
 
         if self.laser is None:
-            raise ValueError(f"Must use a laser with LaserGridIonization.")
+            raise ValueError("Must use a laser with LaserGridIonization.")
 
         # Get laser envelope
         a_env = self.laser.get_envelope()
