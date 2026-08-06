@@ -164,7 +164,8 @@ class LaserGridIonization(RZWakefield):
         solver.
     field_diags : list, optional
         List of fields to save to openpmd diagnostics.
-        One can get the per-ion-level density using 'n_<ion_species>_ionlevel_<level>'.
+        One can get the per-ion-level density using 'n_<ion_species>_ionlevel_<level>'
+        and the electron density using n_electrons.
         Note that E, B and rho are not set by this model.
         By default ['chi', 'a_mod', 'a_phase', 'a'].
 
