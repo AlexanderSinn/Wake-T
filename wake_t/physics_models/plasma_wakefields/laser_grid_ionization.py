@@ -80,7 +80,9 @@ def do_grid_ionization(
                     ion_density[ion_lev + 1, i_zeta, i_r] += transferred_weight
                     elec_density[i_zeta, i_r] += transferred_weight
 
-                ion_density[max_ion_lev, i_zeta, i_r] += ion_density[max_ion_lev, i_zeta + 1, i_r]
+                ion_density[max_ion_lev, i_zeta, i_r] += ion_density[
+                    max_ion_lev, i_zeta + 1, i_r
+                ]
                 chi += (
                     ion_density[max_ion_lev, i_zeta, i_r]
                     * chi_factor_ion
