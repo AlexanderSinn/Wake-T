@@ -312,7 +312,8 @@ class RZWakefield(NumericalField):
                                 np.ascontiguousarray(
                                     self.ion_densities[
                                         self.ion_start_index[i] + j, 2:-2, 2:-2
-                                    ].T * self.n_p
+                                    ].T
+                                    * self.n_p
                                 )
                             ]
                         ]
