@@ -9,13 +9,279 @@ Authors: Wilbert den Hertog, Ángel Ferran Pousa, Carlo Benedetti
 import numpy as np
 import scipy.constants as ct
 
-from wake_t.utilities.numba import njit_serial
+from wake_t.utilities.numba import njit_serial, njit_parallel, prange
 from .tdma import TDMA
 from .utils import unwrap
 
 
-@njit_serial(fastmath=True)
+@njit_parallel(fastmath=True)
+def parallel_scan_mad(a, b, yout, yinit):
+    n = len(yout)
+    m = min(32, n-1)
+
+    aa = np.empty(m, a.dtype)
+    bb = np.empty(m, b.dtype)
+
+    for t in prange(m):
+        ibegin = (n * t) // m
+        iend = (n * (t+1)) // m
+
+        for i in range(ibegin+1, iend):
+            b[i] = a[i] * b[i-1] + b[i]
+            a[i] = a[i] * a[i-1]
+
+        aa[t] = a[iend-1]
+        bb[t] = b[iend-1]
+
+    for t in range(1,m-1):
+        bb[t] = aa[t] * bb[t-1] + bb[t]
+        aa[t] = aa[t] * aa[t-1]
+
+    for t in prange(m):
+        ibegin = (n * t) // m
+        iend = (n * (t+1)) // m
+
+        if t > 0:
+            for i in range(ibegin, iend):
+                b[i] = a[i] * bb[t-1] + b[i]
+                a[i] = a[i] * aa[t-1]
+
+                yout[i] = a[i] * yinit + b[i]
+        else:
+            for i in range(ibegin, iend):
+                yout[i] = a[i] * yinit + b[i]
+
+
+
+@njit_parallel(fastmath=True)
 def evolve_envelope(
+    a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase=True
+):
+    """
+    Solve the 2D envelope equation
+    (\nabla_tr^2+2i*k0/kp*d/dt+2*d^2/(dzdt)-d^2/dt^2)â = chi*â
+
+    Parameters
+    ----------
+    a0 : array
+        Initial value for â at tau=0. Dimension: nz*nr.
+    aold : array
+        Initial value for â at tau=-1. Dimension: nz*nr.
+    chi : array
+        Arrays of the values of the susceptibility. Dimension nz*nr.
+    k0 : float
+        Laser wave number.
+    kp : float
+        Plasma skin depth.
+    zmin : float
+        Minimum value for zeta.
+    zmax : float
+        Maximum value for zeta.
+    nz : int
+        Number of grid points in zeta-direction.
+    rmax : float
+        Maximum value for rho (minimum value is always 0).
+    nr : int
+        Amount of points in the rho direction.
+    dt : float
+        Tau step size.
+    nt : int
+        Number of tau steps.
+    use_phase : bool
+        Determines whether to take into account the terms related to the
+        longitudinal derivative of the complex phase.
+
+    """
+    # print("Laser solve begin")
+    # Calculate step sizes.
+    dz = (zmax - zmin) * kp / (nz - 1)
+    dr = rmax * kp / nr
+    dt = dt * ct.c * kp
+
+    # Precalculate common fractions.
+    inv_dt = 1 / dt
+    inv_dr = 1 / dr
+    inv_dz = 1 / dz
+    inv_dzdt = inv_dt * inv_dz
+    k0_over_kp = k0 / kp
+
+    # Calculate C^+ and C^- [Eq. (8)].
+    C_minus = (
+        -2.0 * inv_dr**2.0 * 0.5
+        - 1j * k0_over_kp * inv_dt
+        + 1.5 * inv_dzdt
+        - inv_dt**2.0
+    )
+    C_plus = (
+        -2.0 * inv_dr**2.0 * 0.5
+        + 1j * k0_over_kp * inv_dt
+        - 1.5 * inv_dzdt
+        - inv_dt**2.0
+    )
+
+    # Calculate L^+ and L^-. Change wrt Benedetti - 2018: in Wake-T we use
+    # cell-centered nodes in the radial direction.
+    L_base = 1.0 / (2.0 * (np.arange(nr) + 0.5))
+    L_minus_over_2 = (1.0 - L_base) * inv_dr**2.0 * 0.5
+    L_plus_over_2 = (1.0 + L_base) * inv_dr**2.0 * 0.5
+    d_lower = L_minus_over_2[1:nr]
+
+    w_full = np.zeros((nz, nr-1), dtype=np.complex128)
+    g_full = np.zeros((nz, nr), dtype=np.complex128)
+    rhs_mul1_full = np.zeros((nz, nr), dtype=np.complex128)
+    rhs_mul2_full = np.zeros((nz, nr), dtype=np.complex128)
+    rhs_add_full = np.zeros((nz, nr), dtype=np.complex128)
+
+    # Loop over time iterations.
+    for n in range(nt):
+        # a_new_jp1 is equivalent to a_new[j+1] and a_new_jp2 to a_new[j+2].
+        a_new_jp1 = np.zeros(nr, dtype=np.complex128)
+        a_new_jp2 = np.zeros(nr, dtype=np.complex128)
+        temp1 = np.zeros(nr, dtype=np.complex128)
+        temp2 = np.zeros(nr, dtype=np.complex128)
+
+        # Getting the phase of the envelope on axis.
+        if use_phase:
+            phases = unwrap(np.angle(a[:, 0]))
+
+        # Loop over z.
+        # print("Parallel Begin")
+        for j in prange(nz):
+            # Calculate phase differences between adjacent points.
+            if use_phase:
+                d_theta1 = phases[j + 1] - phases[j]
+                d_theta2 = phases[j + 2] - phases[j + 1]
+                D_jkn = (1.5 * d_theta1 - 0.5 * d_theta2) * inv_dz
+            else:
+                d_theta1 = 0
+                d_theta2 = 0
+                D_jkn = 0
+
+            # Calculate diagonals.
+            d_main = C_plus - chi[j] * 0.5 + 1j * inv_dt * D_jkn
+            d_upper = L_plus_over_2[: nr - 1]
+
+            w_full[j, 0] = d_upper[0] / d_main[0]
+
+            # Calculate right-hand side of Eq (7).
+            for k in range(nr):
+
+                rhs_mul1_full[j, k] = - (
+                    2
+                    * np.exp(-1j * d_theta1)
+                    * inv_dzdt
+                )
+
+                rhs_mul2_full[j, k] = (
+                    0.5
+                    * np.exp(-1j * (d_theta2 + d_theta1))
+                    * inv_dzdt
+                )
+
+                rhs_jk = (
+                    -2 * inv_dt**2 * a[j, k]
+                    - ((C_minus - chi[j, k] * 0.5 - 1j * inv_dt * D_jkn) * a_old[j, k])
+                    - (
+                        2
+                        * np.exp(-1j * d_theta1)
+                        * inv_dzdt
+                        * ( - a_old[j + 1, k])
+                    )
+                    + (
+                        0.5
+                        * np.exp(-1j * (d_theta2 + d_theta1))
+                        * inv_dzdt
+                        * ( - a_old[j + 2, k])
+                    )
+                )
+                if k > 0:
+                    rhs_jk -= L_minus_over_2[k] * a_old[j, k - 1]
+                if k + 1 < nr:
+                    rhs_jk -= L_plus_over_2[k] * a_old[j, k + 1]
+                rhs_add_full[j, k] = rhs_jk
+
+                if k > 0 and k < nr - 1:
+                    a_im1 = d_lower[k - 1]
+                    inv_coef = 1.0 / (d_main[k] - a_im1 * w_full[j, k - 1])
+                    w_full[j, k] = d_upper[k] * inv_coef
+                    g_full[j, k] = inv_coef
+
+        # print("Parallel end, Serial begin")
+
+        for j in range(nz - 1, -1, -1):
+
+            if use_phase:
+                d_theta1 = phases[j + 1] - phases[j]
+                d_theta2 = phases[j + 2] - phases[j + 1]
+                D_jkn = (1.5 * d_theta1 - 0.5 * d_theta2) * inv_dz
+            else:
+                D_jkn = 0
+
+            d_main_first = C_plus - chi[j, 0] * 0.5 + 1j * inv_dt * D_jkn
+            d_main_last = C_plus - chi[j, -1] * 0.5 + 1j * inv_dt * D_jkn
+
+
+            rhs_first = rhs_add_full[j, 0] + rhs_mul1_full[j, 0] * a_new_jp1[0] \
+                    + rhs_mul2_full[j, 0] * a_new_jp2[0]
+            rhs_last = rhs_add_full[j, -1] + rhs_mul1_full[j, -1] * a_new_jp1[-1] \
+                    + rhs_mul2_full[j, -1] * a_new_jp2[-1]
+            g_full[j, 0] = rhs_first / d_main_first
+            a_old[j + 2, 0] = a[j + 2, 0]
+            a[j + 2, 0] = a_new_jp2[0]
+            a_old[j + 2, -1] = a[j + 2, -1]
+            a[j + 2, -1] = a_new_jp2[-1]
+
+            for i in prange(1, nr - 1):
+                rhs_loc = rhs_add_full[j, i] + rhs_mul1_full[j, i] * a_new_jp1[i] \
+                    + rhs_mul2_full[j, i] * a_new_jp2[i]
+                temp1[i] = -g_full[j, i] * d_lower[i - 1]
+                temp2[i] = g_full[j, i] * rhs_loc
+                a_old[j + 2, i] = a[j + 2, i]
+                a[j + 2, i] = a_new_jp2[i]
+
+            # for i in range(1, nr - 1):
+            #     g_full[j, i] = temp1[i] * g_full[j, i-1] + temp2[i]
+
+            parallel_scan_mad(temp1[1:-1], temp2[1:-1], g_full[j, 1:-1], g_full[j, 0])
+
+
+            # for i in range(1, nr - 1):
+            #     rhs_loc = rhs_add_full[j, i] + rhs_mul1_full[j, i] * a_new_jp1[i] \
+            #         + rhs_mul2_full[j, i] * a_new_jp2[i]
+            #     g_full[j, i] *= (rhs_loc - d_lower[i - 1] * g_full[j, i - 1])
+            #     a_old[j + 2, i] = a[j + 2, i]
+            #     a[j + 2, i] = a_new_jp2[i]
+
+
+            g_full[j, -1] = (rhs_last - d_lower[-2] * g_full[j, -2]) / (d_main_last - d_lower[-2] * w_full[j, -2])
+
+            a_new_jp2, a_new_jp1 = a_new_jp1, a_new_jp2
+
+
+            # a_new_jp1[-1] = g_full[j, -1]
+            # for i in range(nr - 1, 0, -1):
+            #     a_new_jp1[i - 1] = g_full[j, i - 1] - w_full[j, i - 1] * a_new_jp1[i]
+
+
+            for i in prange(1, nr):
+                temp1[i] = - w_full[j, i - 1]
+                temp2[i] = g_full[j, i - 1]
+
+            parallel_scan_mad(temp1[:1:-1], temp2[:1:-1], a_new_jp1[:1:-1], a_new_jp1[-1])
+
+
+        # print("Serial End s", time_s, "l1", time_l1, "l2", time_l2)
+
+        # When the left of the computational domain is reached, paste the last
+        # few values in the a_old and a arrays.
+        a_old[0:2] = a[0:2]
+        a[0] = a_new_jp1
+        a[1] = a_new_jp2
+
+    # print("Laser solve end")
+
+@njit_serial(fastmath=True)
+def evolve_envelope_old(
     a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase=True
 ):
     """

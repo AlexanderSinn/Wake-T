@@ -118,7 +118,9 @@ class OpenPMDDiagnostics:
                         self._write_species(it, s_data)
 
         # Flush data and increase counter for next step.
+        ProfStart("opmd_series.flush")
         opmd_series.flush()
+        ProfStop("opmd_series.flush")
         self._index_out += 1
 
         ProfStop("diagnostics.write_openPMD")

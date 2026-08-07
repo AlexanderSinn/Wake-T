@@ -6,11 +6,10 @@ import scipy.constants as ct
 
 from wake_t.fields.rz_wakefield import RZWakefield
 from wake_t.physics_models.laser.laser_pulse import LaserPulse
-from wake_t.utilities.numba import njit_serial
+from wake_t.utilities.numba import njit_parallel, prange
 from wake_t.utilities.other import ProfStart, ProfStop
 
-
-@njit_serial
+@njit_parallel
 def do_grid_ionization(
     num_ion_species,
     elec_density,
@@ -37,8 +36,8 @@ def do_grid_ionization(
         is_last_plasma = i_s + 1 == num_ion_species
         max_ion_lev = ion_atomic_number[i_s]
 
-        for i_zeta in range(n_xi - 1, -1, -1):
-            for i_r in range(n_r):
+        for i_r in prange(n_r):
+            for i_zeta in range(n_xi - 1, -1, -1):
                 Et = 1j * a_env[i_zeta, i_r] * omega0
                 if i_zeta + 1 < n_xi:
                     Et += (
