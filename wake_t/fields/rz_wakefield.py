@@ -299,6 +299,32 @@ class RZWakefield(NumericalField):
                 fld_arrays += [
                     [np.ascontiguousarray(self.chi.T[2:-2, 2:-2]) * chi_norm]
                 ]
+        if "ion_densities" in self.__dict__:
+            for i in range(len(self.ion_atomic_number)):
+                for j in range(self.ion_atomic_number[i] + 1):
+                    name = f"n_{self.ion_names[i]}_ionlevel_{j}"
+                    if name in self.field_diags:
+                        fld_names += [name]
+                        fld_comps += [None]
+                        fld_attrs += [{}]
+                        fld_arrays += [
+                            [
+                                np.ascontiguousarray(
+                                    self.ion_densities[
+                                        self.ion_start_index[i] + j, 2:-2, 2:-2
+                                    ].T
+                                    * self.n_p
+                                )
+                            ]
+                        ]
+        if "elec_density" in self.__dict__:
+            if "n_electrons" in self.field_diags:
+                fld_names += ["n_electrons"]
+                fld_comps += [None]
+                fld_attrs += [{}]
+                fld_arrays += [
+                    [np.ascontiguousarray(self.elec_density.T[2:-2, 2:-2] * self.n_p)]
+                ]
 
         fld_comp_pos = [fld_position] * len(fld_names)
 
