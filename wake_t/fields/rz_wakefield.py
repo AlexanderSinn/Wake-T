@@ -218,6 +218,7 @@ class RZWakefield(NumericalField):
         fld_attrs = []
         fld_arrays = []
         rho_norm = self.n_p * (-ct.e)
+        chi_norm = self.n_p * ct.e * ct.e * ct.mu_0 / ct.m_e
 
         # Add requested fields to diagnostics.
         if "E" in self.field_diags:
@@ -291,6 +292,13 @@ class RZWakefield(NumericalField):
                     }
                 ]
                 fld_arrays += [[np.ascontiguousarray(a)]]
+            if "chi" in self.field_diags:
+                fld_names += ["chi"]
+                fld_comps += [None]
+                fld_attrs += [{}]
+                fld_arrays += [
+                    [np.ascontiguousarray(self.chi.T[2:-2, 2:-2]) * chi_norm]
+                ]
 
         fld_comp_pos = [fld_position] * len(fld_names)
 
