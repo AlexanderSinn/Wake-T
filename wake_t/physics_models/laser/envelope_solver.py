@@ -54,7 +54,7 @@ def parallel_scan_mad(a, b, yout, yinit):
 
 
 @njit_parallel(fastmath=True)
-def evolve_envelope(
+def evolve_envelope_test(
     a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase=True
 ):
     """
@@ -281,7 +281,7 @@ def evolve_envelope(
     # print("Laser solve end")
 
 @njit_serial(fastmath=True)
-def evolve_envelope_old(
+def evolve_envelope(
     a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase=True
 ):
     """
