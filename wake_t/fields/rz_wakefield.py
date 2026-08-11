@@ -103,7 +103,7 @@ class RZWakefield(NumericalField):
         laser_envelope_nxi: Optional[int] = None,
         laser_envelope_nr: Optional[int] = None,
         laser_envelope_use_phase: Optional[bool] = True,
-        field_diags: Optional[List[str]] = ["rho", "E", "B", "a_mod", "a_phase", "a"],
+        field_diags: Optional[List[str]] = None,
         particle_diags: Optional[List[str]] = [],
         model_name: Optional[str] = "",
     ) -> None:
@@ -123,7 +123,12 @@ class RZWakefield(NumericalField):
         self.n_xi = n_xi
         self.dr = r_max / n_r
         self.dxi = (xi_max - xi_min) / (n_xi - 1)
-        self.field_diags = field_diags
+        if field_diags is None:
+            self.field_diags =  ["rho", "E", "B"]
+            if self.laser is not None:
+                self.field_diags += ["a_mod", "a_phase", "a"]
+        else:
+            self.field_diags = field_diags
         self.particle_diags = particle_diags
         self.model_name = model_name
         # If a laser is included, make sure it is evolved for the whole

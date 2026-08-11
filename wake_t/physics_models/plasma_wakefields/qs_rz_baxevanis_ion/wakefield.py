@@ -199,12 +199,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         laser_envelope_nxi: Optional[int] = None,
         laser_envelope_nr: Optional[int] = None,
         laser_envelope_use_phase: Optional[bool] = True,
-        field_diags: Optional[List[str]] = [
-            "rho",
-            "E",
-            "B",
-            "a",
-        ],
+        field_diags: Optional[List[str]] = None,
         particle_diags: Optional[List[str]] = [],
         use_adaptive_grids: Optional[bool] = False,
         adaptive_grid_nr: Optional[Union[int, List[int]]] = 16,
@@ -258,6 +253,10 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         if len(self.ppc.shape) in [0, 1]:
             self.ppc = np.array([[self.r_max_plasma, self.ppc.flatten()[0]]])
         self.parabolic_coefficient = parabolic_coefficient
+        if field_diags is None:
+            field_diags = ["rho", "E", "B"]
+            if laser is not None:
+                field_diags.append("a")
 
         super().__init__(
             density_function=density_function,
