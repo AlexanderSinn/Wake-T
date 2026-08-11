@@ -449,10 +449,24 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             )
 
         # Calculate rho only if requested in the diagnostics.
-        calculate_rho = any((any("rho" in f or f == "all" for f in
-            (diag["field"] if isinstance(diag["field"], list) else [diag["field"]]))
-            if isinstance(diag, dict) and "field" in diag else "rho" in diag or diag == "all")
-            for diag in (self.field_diags if isinstance(self.field_diags, list) else [self.field_diags])
+        calculate_rho = any(
+            (
+                any(
+                    "rho" in f or f == "all"
+                    for f in (
+                        diag["field"]
+                        if isinstance(diag["field"], list)
+                        else [diag["field"]]
+                    )
+                )
+                if isinstance(diag, dict) and "field" in diag
+                else "rho" in diag or diag == "all"
+            )
+            for diag in (
+                self.field_diags
+                if isinstance(self.field_diags, list)
+                else [self.field_diags]
+            )
         )
 
         # Calculate plasma wakefields

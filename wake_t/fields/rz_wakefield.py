@@ -226,12 +226,23 @@ class RZWakefield(NumericalField):
         dr = np.abs(self.r_fld[1] - self.r_fld[0])
         dz = np.abs(self.xi_fld[1] - self.xi_fld[0])
 
-        def add_diag(options, name, array, factor=None, comps=None, nghost=2,
-                     pos_xi=0.0, pos_r=0.5,
-                     grid_spacing_xi=dz, grid_spacing_r=dr,
-                     grid_labels_xi="z", grid_labels_r="r",
-                     grid_global_offset_xi=self.xi_min, grid_global_offset_r=0.0,
-                     attrs=None):
+        def add_diag(
+            options,
+            name,
+            array,
+            factor=None,
+            comps=None,
+            nghost=2,
+            pos_xi=0.0,
+            pos_r=0.5,
+            grid_spacing_xi=dz,
+            grid_spacing_r=dr,
+            grid_labels_xi="z",
+            grid_labels_r="r",
+            grid_global_offset_xi=self.xi_min,
+            grid_global_offset_r=0.0,
+            attrs=None,
+        ):
 
             pos = [pos_xi, pos_r]
             grid_spacing = [grid_spacing_xi, grid_spacing_r]
@@ -246,16 +257,34 @@ class RZWakefield(NumericalField):
             xi_stride = None
 
             if "r_min" in options:
-                r_begin = round((options["r_min"] - grid_global_offset[1]) / grid_spacing[1] - pos[1])
-                r_begin = max(0, min(r_begin, array[0].shape[1]-1))
+                r_begin = round(
+                    (options["r_min"] - grid_global_offset[1]) / grid_spacing[1]
+                    - pos[1]
+                )
+                r_begin = max(0, min(r_begin, array[0].shape[1] - 1))
             if "r_max" in options:
-                r_end = round((options["r_max"] - grid_global_offset[1]) / grid_spacing[1] - pos[1]) + 1
+                r_end = (
+                    round(
+                        (options["r_max"] - grid_global_offset[1]) / grid_spacing[1]
+                        - pos[1]
+                    )
+                    + 1
+                )
                 r_end = max(1, min(r_end, array[0].shape[1]))
             if "xi_min" in options:
-                xi_begin = round((options["xi_min"] - grid_global_offset[0]) / grid_spacing[0] - pos[0])
-                xi_begin = max(0, min(xi_begin, array[0].shape[0]-1))
+                xi_begin = round(
+                    (options["xi_min"] - grid_global_offset[0]) / grid_spacing[0]
+                    - pos[0]
+                )
+                xi_begin = max(0, min(xi_begin, array[0].shape[0] - 1))
             if "xi_max" in options:
-                xi_end = round((options["xi_max"] - grid_global_offset[0]) / grid_spacing[0] - pos[0]) + 1
+                xi_end = (
+                    round(
+                        (options["xi_max"] - grid_global_offset[0]) / grid_spacing[0]
+                        - pos[0]
+                    )
+                    + 1
+                )
                 xi_end = max(1, min(xi_end, array[0].shape[0]))
 
             if r_begin is not None and r_begin != 0:
@@ -286,8 +315,14 @@ class RZWakefield(NumericalField):
                 if nghost is not None and nghost != 0:
                     a = a[nghost:-nghost, nghost:-nghost]
 
-                if r_begin is not None or r_end is not None or r_stride is not None or \
-                    xi_begin is not None or xi_end is not None or xi_stride is not None:
+                if (
+                    r_begin is not None
+                    or r_end is not None
+                    or r_stride is not None
+                    or xi_begin is not None
+                    or xi_end is not None
+                    or xi_stride is not None
+                ):
                     a = a[xi_begin:xi_end:xi_stride, r_begin:r_end:r_stride]
 
                 if "do_transpose" not in options or options["do_transpose"]:
@@ -333,17 +368,23 @@ class RZWakefield(NumericalField):
         all_field_data = [d for d in all_field_data_pre if not isinstance(d, str)]
 
         if any(isinstance(d, str) for d in all_field_data_pre):
-            all_field_data.insert(0, {
-                "field" : [d for d in all_field_data_pre if isinstance(d, str)]
-            })
+            all_field_data.insert(
+                0, {"field": [d for d in all_field_data_pre if isinstance(d, str)]}
+            )
 
         for idx, i_field_data in enumerate(all_field_data):
-
             if isinstance(i_field_data, dict):
                 options = i_field_data
                 allowed_options = [
-                    "field", "r_min", "r_max", "xi_min", "xi_max",
-                    "r_stride", "xi_stride", "do_transpose", "diag_name"
+                    "field",
+                    "r_min",
+                    "r_max",
+                    "xi_min",
+                    "xi_max",
+                    "r_stride",
+                    "xi_stride",
+                    "do_transpose",
+                    "diag_name",
                 ]
                 for o in options.keys():
                     if o not in allowed_options:
@@ -367,12 +408,14 @@ class RZWakefield(NumericalField):
             # Add requested fields to diagnostics.
             available_fields.append("E")
             if "E" in fields or "all" in fields:
-                add_diag(options, "E", [self.e_r, self.e_t, self.e_z],
-                        comps=["r", "t", "z"])
+                add_diag(
+                    options, "E", [self.e_r, self.e_t, self.e_z], comps=["r", "t", "z"]
+                )
             available_fields.append("B")
             if "B" in fields or "all" in fields:
-                add_diag(options, "B", [self.b_r, self.b_t, self.b_z],
-                        comps=["r", "t", "z"])
+                add_diag(
+                    options, "B", [self.b_r, self.b_t, self.b_z], comps=["r", "t", "z"]
+                )
             available_fields.append("rho")
             if "rho" in fields or "all" in fields:
                 add_diag(options, "rho", [self.rho], factor=rho_norm)
@@ -396,25 +439,42 @@ class RZWakefield(NumericalField):
 
                 available_fields.append("a_mod")
                 if "a_mod" in fields or "all" in fields:
-                    add_diag(options, "a_mod", [np.abs(self.laser.get_envelope())],
-                            nghost=None, attrs={"polarization": self.laser.polarization})
+                    add_diag(
+                        options,
+                        "a_mod",
+                        [np.abs(self.laser.get_envelope())],
+                        nghost=None,
+                        attrs={"polarization": self.laser.polarization},
+                    )
                 available_fields.append("a_phase")
                 if "a_phase" in fields or "all" in fields:
-                    add_diag(options, "a_phase", [np.angle(self.laser.get_envelope())],
-                            nghost=None)
+                    add_diag(
+                        options,
+                        "a_phase",
+                        [np.angle(self.laser.get_envelope())],
+                        nghost=None,
+                    )
                 available_fields.append("a")
                 if "a" in fields or "all" in fields:
-                    add_diag(options, "a", [self.laser.get_envelope()],
-                            nghost=None,
-                            attrs=laser_attrs)
+                    add_diag(
+                        options,
+                        "a",
+                        [self.laser.get_envelope()],
+                        nghost=None,
+                        attrs=laser_attrs,
+                    )
                 if self.laser.use_subgrid:
                     available_fields.append("a_subgrid")
                     if "a_subgrid" in fields or "all" in fields:
-                        add_diag(options, "a_subgrid", [self.laser._a_env[:-2]],
-                                nghost=None,
-                                grid_spacing_xi=self.laser.subgrid_params["subgrid"]["dz"],
-                                grid_spacing_r=self.laser.subgrid_params["subgrid"]["dr"],
-                                attrs=laser_attrs)
+                        add_diag(
+                            options,
+                            "a_subgrid",
+                            [self.laser._a_env[:-2]],
+                            nghost=None,
+                            grid_spacing_xi=self.laser.subgrid_params["subgrid"]["dz"],
+                            grid_spacing_r=self.laser.subgrid_params["subgrid"]["dr"],
+                            attrs=laser_attrs,
+                        )
                 available_fields.append("chi")
                 if "chi" in fields or "all" in fields:
                     add_diag(options, "chi", [self.chi], factor=chi_norm)
@@ -424,17 +484,24 @@ class RZWakefield(NumericalField):
                         name = f"n_{self.ion_names[i]}_ionlevel_{j}"
                         available_fields.append(name)
                         if name in fields or "all" in fields:
-                            add_diag(options, name,
-                                    [self.ion_densities[self.ion_start_index[i] + j, :, :]],
-                                    factor=self.n_p)
+                            add_diag(
+                                options,
+                                name,
+                                [self.ion_densities[self.ion_start_index[i] + j, :, :]],
+                                factor=self.n_p,
+                            )
             if "elec_density" in self.__dict__:
                 available_fields.append("n_electrons")
                 if "n_electrons" in fields or "all" in fields:
-                    add_diag(options, "n_electrons", [self.elec_density], factor=self.n_p)
+                    add_diag(
+                        options, "n_electrons", [self.elec_density], factor=self.n_p
+                    )
 
             for f in fields:
                 if f not in available_fields:
-                    raise ValueError(f"Diagnostic field {f} is not available! " +
-                                     f"Available fields are {available_fields}")
+                    raise ValueError(
+                        f"Diagnostic field {f} is not available! "
+                        + f"Available fields are {available_fields}"
+                    )
 
         return diag_data
