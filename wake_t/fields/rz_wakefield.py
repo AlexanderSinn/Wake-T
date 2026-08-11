@@ -124,7 +124,7 @@ class RZWakefield(NumericalField):
         self.dr = r_max / n_r
         self.dxi = (xi_max - xi_min) / (n_xi - 1)
         if field_diags is None:
-            self.field_diags =  ["rho", "E", "B"]
+            self.field_diags = ["rho", "E", "B"]
             if self.laser is not None:
                 self.field_diags += ["a_mod", "a_phase", "a"]
         else:
