@@ -235,11 +235,7 @@ class LaserGridIonization(RZWakefield):
                     77.4735,
                     97.8901,
                     552.06732,
-<<<<<<< HEAD
-                    67.046116,
-=======
                     667.046116,
->>>>>>> dev
                 ],
             },
             "Ar": {
