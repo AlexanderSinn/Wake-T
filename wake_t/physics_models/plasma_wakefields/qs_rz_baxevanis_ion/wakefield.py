@@ -129,7 +129,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
     field_diags : list, optional
         List of fields to save to openpmd diagnostics. By default ['rho', 'E',
         'B', 'a_mod', 'a_phase'].
-    field_diags : list, optional
+    particle_diags : list, optional
         List of particle quantities to save to openpmd diagnostics. By default
         [].
     use_adaptive_grids : bool, optional
@@ -199,12 +199,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         laser_envelope_nxi: Optional[int] = None,
         laser_envelope_nr: Optional[int] = None,
         laser_envelope_use_phase: Optional[bool] = True,
-        field_diags: Optional[List[str]] = [
-            "rho",
-            "E",
-            "B",
-            "a",
-        ],
+        field_diags: Optional[List[str]] = None,
         particle_diags: Optional[List[str]] = [],
         use_adaptive_grids: Optional[bool] = False,
         adaptive_grid_nr: Optional[Union[int, List[int]]] = 16,
@@ -258,6 +253,10 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         if len(self.ppc.shape) in [0, 1]:
             self.ppc = np.array([[self.r_max_plasma, self.ppc.flatten()[0]]])
         self.parabolic_coefficient = parabolic_coefficient
+        if field_diags is None:
+            field_diags = ["rho", "E", "B"]
+            if laser is not None:
+                field_diags.append("a")
 
         super().__init__(
             density_function=density_function,
@@ -449,7 +448,25 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             )
 
         # Calculate rho only if requested in the diagnostics.
-        calculate_rho = any("rho" in diag for diag in self.field_diags)
+        calculate_rho = any(
+            (
+                any(
+                    "rho" in f or f == "all"
+                    for f in (
+                        diag["field"]
+                        if isinstance(diag["field"], list)
+                        else [diag["field"]]
+                    )
+                )
+                if isinstance(diag, dict) and "field" in diag
+                else "rho" in diag or diag == "all"
+            )
+            for diag in (
+                self.field_diags
+                if isinstance(self.field_diags, list)
+                else [self.field_diags]
+            )
+        )
 
         # Calculate plasma wakefields
         self.pp = calculate_wakefields(
