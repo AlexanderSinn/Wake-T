@@ -69,7 +69,21 @@ class LaserStaticPlasma(RZWakefield):
         solver.
     field_diags : list, optional
         List of fields to save to openpmd diagnostics.
-        By default ['rho', 'chi', 'a_mod', 'a_phase', 'a'].
+        By default ['rho', 'chi', 'a_mod', 'a_phase', 'a']. Can also be 'all'.
+        Each entry can also be a dict to give more precise control of the
+        outputted data. The dict can have the following keys:
+        {
+            "field" : list of field names to output
+            "r_min" , "r_max" , "xi_min" , "xi_max" :
+                Cut the diagnostic box in r and xi.
+            "r_stride" , "xi_stride" :
+                Add a stride in units of dr and dxi to r and xi.
+            "do_transpose" :
+                Wheater to transpose data for the output (default True).
+            "diag_name" :
+                Name to append to the field name if there are multiple
+                diagnostics with the same field.
+        }
 
     See Also
     --------
