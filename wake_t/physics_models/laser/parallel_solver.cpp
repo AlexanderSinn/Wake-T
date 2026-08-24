@@ -10,6 +10,10 @@ cfg['extra_link_args'] = ['-lgomp'] if OSError != "nt" else []
 #include <iostream>
 #include <complex>
 #include <vector>
+#include <atomic>
+#include <omp.h>
+#include <thread>
+#include <chrono>
 
 namespace py = pybind11;
 
@@ -39,10 +43,10 @@ using cplx = std::complex<double>;
 
 void TDMA(
     long long int n,
-    double* a,
-    cplx* b,
-    double* c,
-    cplx* d,
+    const double* a,
+    const cplx* b,
+    const double* c,
+    const cplx* d,
     cplx* p
 )
 {
@@ -82,7 +86,8 @@ void parallel_solver(
     long long int nr,
     double dt,
     long long int nt,
-    bool use_phase
+    bool use_phase,
+    int num_threads
 )
 {
     FArray2D a_arr{a};
@@ -91,9 +96,9 @@ void parallel_solver(
 
     py::gil_scoped_release release;
 
-    constexpr double ct_c = 299792458.;
+    omp_set_num_threads(num_threads);
 
-    std::vector<cplx> rhs(nr);
+    constexpr double ct_c = 299792458.;
 
     double dz = (zmax - zmin) * kp / (nz - 1);
     double dr = rmax * kp / nr;
@@ -127,58 +132,103 @@ void parallel_solver(
         L_plus_over_2[i] = (1.0 + L_base) * inv_dr*inv_dr * 0.5;
     }
 
-    for (int n=0; n<nt; ++n) {
-        std::vector<cplx> a_new_jp1(nr, 0);
-        std::vector<cplx> a_new_jp2(nr, 0);
-        std::vector<cplx> d_main(nr);
+    std::vector<std::atomic<int>> current_time_step (nz+2);
+    for (auto& step : current_time_step) {
+        step = 0;
+    }
 
-        for (int j=nz-1; j>=0; --j) {
-
-            for (int k=0; k<nr; ++k) {
-
-                cplx rhs_k = (
-                    -2 * inv_dt * inv_dt * a_arr(k, j)
-                    - ((C_minus - chi_arr(k, j) * 0.5) * a_old_arr(k, j))
-                    - (
-                        2
-                        * inv_dzdt
-                        * (a_new_jp1[k] - a_old_arr(k, j + 1))
-                    )
-                    + (
-                        0.5
-                        * inv_dzdt
-                        * (a_new_jp2[k] - a_old_arr(k, j + 2))
-                    )
-                );
-
-                if (k > 0) {
-                    rhs_k -= L_minus_over_2[k] * a_old_arr(k - 1, j);
-                }
-                if (k + 1 < nr) {
-                    rhs_k -= L_plus_over_2[k] * a_old_arr(k + 1, j);
-                }
-                rhs[k] = rhs_k;
-
-                d_main[k] = C_plus - chi_arr(k, j) * 0.5;
-
-            }
-
-            for (int k=0; k<nr; ++k) {
-                a_old_arr(k, j+2) = a_arr(k, j+2);
-                a_arr(k, j+2) = a_new_jp2[k];
-            }
-
-            std::swap(a_new_jp2, a_new_jp1);
-
-            TDMA(nr, L_minus_over_2.data()+1, d_main.data(), L_plus_over_2.data(),
-                rhs.data(), a_new_jp1.data());
+    auto recv = [&](int step, int slice){
+        while (step != current_time_step[slice].load(std::memory_order_acquire)) {
+            using namespace std::chrono_literals;
+            std::this_thread::sleep_for(10us);
         }
+    };
+    auto send = [&](int step, int slice){
+        current_time_step[slice].store(step, std::memory_order_release);
+    };
 
-        for (int k=0; k<nr; ++k) {
-            a_old_arr(k, 0) = a_arr(k, 0);
-            a_old_arr(k, 1) = a_arr(k, 1);
-            a_arr(k, 0) = a_new_jp1[k];
-            a_arr(k, 1) = a_new_jp2[k];
+// #pragma omp parallel
+//     {
+// #pragma omp critical
+//         {
+//             std::cout << omp_get_thread_num() << " " << omp_get_num_threads() << std::endl;
+//         }
+//     }
+#pragma omp parallel
+    {
+        const int ithread = omp_get_thread_num();
+        const int nthreads = omp_get_num_threads();
+
+        for (int n=ithread; n<nt; n += nthreads) {
+            std::vector<cplx> rhs(nr);
+            std::vector<cplx> a_new_jp1(nr, 0);
+            std::vector<cplx> a_new_jp2(nr, 0);
+            std::vector<cplx> d_main(nr);
+
+            recv(n, nz+1);
+            recv(n, nz);
+
+            for (int j=nz-1; j>=0; --j) {
+
+                recv(n, j);
+
+// #pragma omp critical
+//                 {
+//                     std::cout << "thread " << ithread << " step " << n << " slice " << j << std::endl;
+//                 }
+
+                for (int k=0; k<nr; ++k) {
+
+                    cplx rhs_k = (
+                        -2 * inv_dt * inv_dt * a_arr(k, j)
+                        - ((C_minus - chi_arr(k, j) * 0.5) * a_old_arr(k, j))
+                        - (
+                            2
+                            * inv_dzdt
+                            * (a_new_jp1[k] - a_old_arr(k, j + 1))
+                        )
+                        + (
+                            0.5
+                            * inv_dzdt
+                            * (a_new_jp2[k] - a_old_arr(k, j + 2))
+                        )
+                    );
+
+                    if (k > 0) {
+                        rhs_k -= L_minus_over_2[k] * a_old_arr(k - 1, j);
+                    }
+                    if (k + 1 < nr) {
+                        rhs_k -= L_plus_over_2[k] * a_old_arr(k + 1, j);
+                    }
+                    rhs[k] = rhs_k;
+
+                    d_main[k] = C_plus - chi_arr(k, j) * 0.5;
+
+                }
+
+                for (int k=0; k<nr; ++k) {
+                    a_old_arr(k, j+2) = a_arr(k, j+2);
+                    a_arr(k, j+2) = a_new_jp2[k];
+                }
+
+                send(n+1, j+2);
+
+                std::swap(a_new_jp2, a_new_jp1);
+
+                TDMA(nr, L_minus_over_2.data()+1, d_main.data(), L_plus_over_2.data(),
+                    rhs.data(), a_new_jp1.data());
+
+            }
+
+            for (int k=0; k<nr; ++k) {
+                a_old_arr(k, 0) = a_arr(k, 0);
+                a_old_arr(k, 1) = a_arr(k, 1);
+                a_arr(k, 0) = a_new_jp1[k];
+                a_arr(k, 1) = a_new_jp2[k];
+            }
+
+            send(n+1, 1);
+            send(n+1, 0);
         }
     }
 }

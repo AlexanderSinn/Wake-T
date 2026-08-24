@@ -9,7 +9,7 @@ Authors: Wilbert den Hertog, Ángel Ferran Pousa, Carlo Benedetti
 import numpy as np
 import scipy.constants as ct
 
-from wake_t.utilities.numba import njit_serial
+from wake_t.utilities.numba import njit_serial, num_threads
 from .tdma import TDMA
 from .utils import unwrap
 import cppimport
@@ -22,8 +22,8 @@ print("Import End")
 def evolve_envelope(
     a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase=True
 ):
-    # cppmodule.parallel_solver(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase)
-    evolve_envelope_old(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase)
+    cppmodule.parallel_solver(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase, num_threads)
+    # evolve_envelope_old(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase)
 
 
 @njit_serial(fastmath=True)

@@ -194,9 +194,17 @@ class LaserPulse:
 
         # Compute evolution.
         if self.n_steps == 0:
+            num_substeps = self.solver_params["nt"]
+            self.solver_params["nt"] = 1
             evolve_envelope_non_centered(
                 self._a_env, self._a_env_old, chi, k_0, k_p, **self.solver_params
             )
+            if num_substeps > 1:
+                self.solver_params["nt"] = num_substeps - 1
+                evolve_envelope(
+                    self._a_env, self._a_env_old, chi, k_0, k_p, **self.solver_params
+                )
+            self.solver_params["nt"] = num_substeps
         else:
             evolve_envelope(
                 self._a_env, self._a_env_old, chi, k_0, k_p, **self.solver_params
