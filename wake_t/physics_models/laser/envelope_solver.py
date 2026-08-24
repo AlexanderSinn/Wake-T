@@ -12,10 +12,22 @@ import scipy.constants as ct
 from wake_t.utilities.numba import njit_serial
 from .tdma import TDMA
 from .utils import unwrap
+import cppimport
+
+print("Import Begin")
+cppmodule = cppimport.imp_from_filepath("/home/asinn/Wake-T/wake_t/physics_models/laser/parallel_solver.cpp")
+print("Import End")
+
+
+def evolve_envelope(
+    a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase=True
+):
+    # cppmodule.parallel_solver(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase)
+    evolve_envelope_old(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase)
 
 
 @njit_serial(fastmath=True)
-def evolve_envelope(
+def evolve_envelope_old(
     a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase=True
 ):
     """

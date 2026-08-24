@@ -204,9 +204,11 @@ class LaserPulse:
 
         ProfStop("laser.evolve_envelope")
 
+        ProfStart("laser._update_output_envelope")
         # Update arrays and step count.
         self._update_output_envelope()
         self.n_steps += 1
+        ProfStop("laser._update_output_envelope")
 
     def get_group_velocity(self, n_p: float) -> float:
         """
