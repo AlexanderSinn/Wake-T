@@ -3,6 +3,7 @@
 setup_pybind11(cfg)
 cfg['extra_compile_args'] = ['-fopenmp', '-O3', '-ffast-math', '-march=native'] if OSError != "nt" else ['/openmp']
 cfg['extra_link_args'] = ['-lgomp'] if OSError != "nt" else []
+cfg['parallel'] = false
 %>
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
@@ -38,6 +39,29 @@ struct FArray2D {
 template<class T>
 FArray2D(py::array_t<T, py::array::c_style>& arr) -> FArray2D<T>;
 
+// template<class T>
+// struct FArray3D {
+//     T* ptr = nullptr;
+//     long long int jstride = 0;
+//     long long int kstride = 0;
+
+//     FArray3D () = default;
+
+//     FArray3D (py::array_t<T, py::array::c_style>& arr) {
+//         py::buffer_info arr_info = arr.request();
+//         ptr = static_cast<T*>(arr_info.ptr);
+//         kstride = arr_info.strides[0] / arr_info.itemsize;
+//         jstride = arr_info.strides[1] / arr_info.itemsize;
+//     }
+
+//     T& operator()(int i, int j, int k) const {
+//         return ptr[i + j * jstride + k * kstride];
+//     }
+// };
+
+// template<class T>
+// FArray3D(py::array_t<T, py::array::c_style>& arr) -> FArray3D<T>;
+
 using cplx = std::complex<double>;
 
 
@@ -72,8 +96,133 @@ void TDMA(
 }
 
 
+void recv (
+    std::vector<std::atomic<int>>& current_time_step,
+    int step, int slice
+)
+{
+    while (step != current_time_step[slice].load(std::memory_order_acquire)) {
+        // __builtin_ia32_pause();
+        // using namespace std::chrono_literals;
+        // std::this_thread::sleep_for(1us);
+    }
+}
 
-void parallel_solver(
+void send (
+    std::vector<std::atomic<int>>& current_time_step,
+    int step, int slice
+)
+{
+    current_time_step[slice].store(step, std::memory_order_release);
+}
+
+void SolveOneSlice (
+    int n, int j, int nz, int nr,
+    std::vector<std::atomic<int>>& current_time_step,
+    bool is_first_step,
+    cplx C_minus, cplx C_plus,
+    double inv_dzdt, double inv_dt,
+    FArray2D<cplx>& a_arr,
+    FArray2D<cplx>& a_old_arr,
+    FArray2D<double>& chi_arr,
+    std::vector<cplx>& rhs,
+    std::vector<cplx>& a_new_jp1,
+    std::vector<cplx>& a_new_jp2,
+    std::vector<cplx>& d_main,
+    const std::vector<double>& L_minus_over_2,
+    const std::vector<double>& L_plus_over_2
+)
+{
+    if (j == nz-1) {
+        recv(current_time_step, n, nz+1);
+        recv(current_time_step, n, nz);
+    }
+
+    recv(current_time_step, n, j);
+
+    if (is_first_step && n == 0) {
+        for (int k=0; k<nr; ++k) {
+
+            cplx rhs_k = (
+                - ((C_minus - chi_arr(k, j) * 0.5) * a_arr(k, j))
+                - (
+                    4
+                    * inv_dzdt
+                    * (a_new_jp1[k] - a_arr(k, j + 1))
+                )
+                + (
+                    1
+                    * inv_dzdt
+                    * (a_new_jp2[k] - a_arr(k, j + 2))
+                )
+            );
+
+            if (k > 0) {
+                rhs_k -= L_minus_over_2[k] * a_arr(k - 1, j);
+            }
+            if (k + 1 < nr) {
+                rhs_k -= L_plus_over_2[k] * a_arr(k + 1, j);
+            }
+            rhs[k] = rhs_k;
+
+            d_main[k] = C_plus - chi_arr(k, j) * 0.5;
+        }
+    } else {
+        for (int k=0; k<nr; ++k) {
+
+            cplx rhs_k = (
+                -2 * inv_dt * inv_dt * a_arr(k, j)
+                - ((C_minus - chi_arr(k, j) * 0.5) * a_old_arr(k, j))
+                - (
+                    2
+                    * inv_dzdt
+                    * (a_new_jp1[k] - a_old_arr(k, j + 1))
+                )
+                + (
+                    0.5
+                    * inv_dzdt
+                    * (a_new_jp2[k] - a_old_arr(k, j + 2))
+                )
+            );
+
+            if (k > 0) {
+                rhs_k -= L_minus_over_2[k] * a_old_arr(k - 1, j);
+            }
+            if (k + 1 < nr) {
+                rhs_k -= L_plus_over_2[k] * a_old_arr(k + 1, j);
+            }
+            rhs[k] = rhs_k;
+
+            d_main[k] = C_plus - chi_arr(k, j) * 0.5;
+        }
+    }
+
+    for (int k=0; k<nr; ++k) {
+        a_old_arr(k, j+2) = a_arr(k, j+2);
+        a_arr(k, j+2) = a_new_jp2[k];
+    }
+
+    send(current_time_step, n+1, j+2);
+
+    std::swap(a_new_jp2, a_new_jp1);
+
+    TDMA(nr, L_minus_over_2.data()+1, d_main.data(), L_plus_over_2.data(),
+        rhs.data(), a_new_jp1.data());
+
+    if (j == 0) {
+        for (int k=0; k<nr; ++k) {
+            a_old_arr(k, 0) = a_arr(k, 0);
+            a_old_arr(k, 1) = a_arr(k, 1);
+            a_arr(k, 0) = a_new_jp1[k];
+            a_arr(k, 1) = a_new_jp2[k];
+        }
+
+        send(current_time_step, n+1, 1);
+        send(current_time_step, n+1, 0);
+    }
+}
+
+void parallel_solver (
     py::array_t<cplx, py::array::c_style> a,
     py::array_t<cplx, py::array::c_style> a_old,
     py::array_t<double, py::array::c_style> chi,
@@ -87,6 +236,7 @@ void parallel_solver(
     double dt,
     long long int nt,
     bool use_phase,
+    bool is_first_step,
     int num_threads
 )
 {
@@ -110,19 +260,6 @@ void parallel_solver(
     double inv_dzdt = inv_dt * inv_dz;
     double k0_over_kp = k0 / kp;
 
-    cplx C_minus = (
-        -2.0 * inv_dr * inv_dr* 0.5
-        - cplx(0, 1) * k0_over_kp * inv_dt
-        + 1.5 * inv_dzdt
-        - inv_dt*inv_dt
-    );
-    cplx C_plus = (
-        -2.0 * inv_dr * inv_dr * 0.5
-        + cplx(0, 1) * k0_over_kp * inv_dt
-        - 1.5 * inv_dzdt
-        - inv_dt*inv_dt
-    );
-
     std::vector<double> L_minus_over_2(nr);
     std::vector<double> L_plus_over_2(nr);
 
@@ -137,98 +274,57 @@ void parallel_solver(
         step = 0;
     }
 
-    auto recv = [&](int step, int slice){
-        while (step != current_time_step[slice].load(std::memory_order_acquire)) {
-            using namespace std::chrono_literals;
-            std::this_thread::sleep_for(10us);
-        }
-    };
-    auto send = [&](int step, int slice){
-        current_time_step[slice].store(step, std::memory_order_release);
-    };
-
-// #pragma omp parallel
-//     {
-// #pragma omp critical
-//         {
-//             std::cout << omp_get_thread_num() << " " << omp_get_num_threads() << std::endl;
-//         }
-//     }
 #pragma omp parallel
     {
         const int ithread = omp_get_thread_num();
         const int nthreads = omp_get_num_threads();
+        std::vector<cplx> rhs(nr);
+        std::vector<cplx> a_new_jp1(nr);
+        std::vector<cplx> a_new_jp2(nr);
+        std::vector<cplx> d_main(nr);
 
         for (int n=ithread; n<nt; n += nthreads) {
-            std::vector<cplx> rhs(nr);
-            std::vector<cplx> a_new_jp1(nr, 0);
-            std::vector<cplx> a_new_jp2(nr, 0);
-            std::vector<cplx> d_main(nr);
+            for (int k=0; k<nr; ++k) {
+                a_new_jp1[k] = 0;
+                a_new_jp2[k] = 0;
+            }
 
-            recv(n, nz+1);
-            recv(n, nz);
+            cplx C_minus = 0;
+            cplx C_plus = 0;
+            if (is_first_step && n == 0) {
+                C_minus =
+                    -2.0 * inv_dr*inv_dr * 0.5 - cplx(0, 2) * k0_over_kp * inv_dt
+                    + 3 * inv_dzdt;
+                C_plus =
+                    -2.0 * inv_dr*inv_dr* 0.5 + cplx(0, 2) * k0_over_kp * inv_dt
+                    - 3 * inv_dzdt;
+            } else {
+                C_minus =
+                    -2.0 * inv_dr * inv_dr* 0.5 - cplx(0, 1) * k0_over_kp * inv_dt
+                    + 1.5 * inv_dzdt - inv_dt*inv_dt;
+                C_plus =
+                    -2.0 * inv_dr * inv_dr * 0.5 + cplx(0, 1) * k0_over_kp * inv_dt
+                    - 1.5 * inv_dzdt - inv_dt*inv_dt;
+            }
 
             for (int j=nz-1; j>=0; --j) {
-
-                recv(n, j);
-
-// #pragma omp critical
-//                 {
-//                     std::cout << "thread " << ithread << " step " << n << " slice " << j << std::endl;
-//                 }
-
-                for (int k=0; k<nr; ++k) {
-
-                    cplx rhs_k = (
-                        -2 * inv_dt * inv_dt * a_arr(k, j)
-                        - ((C_minus - chi_arr(k, j) * 0.5) * a_old_arr(k, j))
-                        - (
-                            2
-                            * inv_dzdt
-                            * (a_new_jp1[k] - a_old_arr(k, j + 1))
-                        )
-                        + (
-                            0.5
-                            * inv_dzdt
-                            * (a_new_jp2[k] - a_old_arr(k, j + 2))
-                        )
-                    );
-
-                    if (k > 0) {
-                        rhs_k -= L_minus_over_2[k] * a_old_arr(k - 1, j);
-                    }
-                    if (k + 1 < nr) {
-                        rhs_k -= L_plus_over_2[k] * a_old_arr(k + 1, j);
-                    }
-                    rhs[k] = rhs_k;
-
-                    d_main[k] = C_plus - chi_arr(k, j) * 0.5;
-
-                }
-
-                for (int k=0; k<nr; ++k) {
-                    a_old_arr(k, j+2) = a_arr(k, j+2);
-                    a_arr(k, j+2) = a_new_jp2[k];
-                }
-
-                send(n+1, j+2);
-
-                std::swap(a_new_jp2, a_new_jp1);
-
-                TDMA(nr, L_minus_over_2.data()+1, d_main.data(), L_plus_over_2.data(),
-                    rhs.data(), a_new_jp1.data());
-
+                SolveOneSlice (
+                    n, j, nz, nr,
+                    current_time_step,
+                    is_first_step,
+                    C_minus, C_plus,
+                    inv_dzdt, inv_dt,
+                    a_arr,
+                    a_old_arr,
+                    chi_arr,
+                    rhs,
+                    a_new_jp1,
+                    a_new_jp2,
+                    d_main,
+                    L_minus_over_2,
+                    L_plus_over_2
+                );
             }
-
-            for (int k=0; k<nr; ++k) {
-                a_old_arr(k, 0) = a_arr(k, 0);
-                a_old_arr(k, 1) = a_arr(k, 1);
-                a_arr(k, 0) = a_new_jp1[k];
-                a_arr(k, 1) = a_new_jp2[k];
-            }
-
-            send(n+1, 1);
-            send(n+1, 0);
         }
     }
 }
