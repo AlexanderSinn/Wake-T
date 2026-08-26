@@ -192,7 +192,11 @@ class LaserPulse:
         ProfStart("laser.evolve_envelope")
 
         evolve_envelope(
-            self._a_env, self._a_env_old, chi, k_0, k_p,
+            self._a_env,
+            self._a_env_old,
+            chi,
+            k_0,
+            k_p,
             is_first_step=self.n_steps == 0,
             **self.solver_params,
         )

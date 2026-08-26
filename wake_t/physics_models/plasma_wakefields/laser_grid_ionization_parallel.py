@@ -8,17 +8,17 @@ from wake_t.utilities.other import ProfStart, ProfStop
 import cppimport
 
 print("Import Begin")
-cppmodule = cppimport.imp_from_filepath("/home/asinn/Wake-T/wake_t/physics_models/plasma_wakefields/parallel_solver.cpp")
+cppmodule = cppimport.imp_from_filepath(
+    "/home/asinn/Wake-T/wake_t/physics_models/plasma_wakefields/parallel_solver.cpp"
+)
 print("Import End")
 
 
 class LaserGridIonizationParallel(LaserGridIonization):
-
     def _evolve_properties(self, bunches):
         ProfStart("EvolveLaserParallel")
         if self.laser is not None:
             if self.laser_evolution:
-
                 k_0 = 2 * np.pi / self.laser.l_0
                 k_p = np.sqrt(ct.e**2 * self.n_p / (ct.m_e * ct.epsilon_0)) / ct.c
 
@@ -53,7 +53,7 @@ class LaserGridIonizationParallel(LaserGridIonization):
                     self.adk_prefactors,
                     self.laser.polarization == "linear",
                     1 / np.abs(self.xi_fld[1] - self.xi_fld[0]),
-                    num_threads
+                    num_threads,
                 )
 
                 # Update arrays and step count.

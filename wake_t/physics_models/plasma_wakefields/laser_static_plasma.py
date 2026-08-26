@@ -8,6 +8,7 @@ from wake_t.physics_models.laser.laser_pulse import LaserPulse
 
 from wake_t.utilities.other import ProfStart, ProfStop
 
+
 class LaserStaticPlasma(RZWakefield):
     """
     This model can be used to propagate laser pulses through a vacuum or a

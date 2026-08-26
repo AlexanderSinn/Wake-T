@@ -11,6 +11,7 @@ from wake_t.physics_models.laser.laser_pulse import LaserPulse
 
 from wake_t.utilities.other import ProfStart, ProfStop
 
+
 class RZWakefield(NumericalField):
     """Base class for plasma wakefields in r-z geometry.
 

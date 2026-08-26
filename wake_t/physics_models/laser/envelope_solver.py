@@ -13,6 +13,7 @@ from wake_t.utilities.numba import njit_serial, num_threads
 from .tdma import TDMA
 from .utils import unwrap
 
+
 @njit_serial(fastmath=True)
 def evolve_envelope(
     a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase, is_first_step
@@ -81,7 +82,6 @@ def evolve_envelope(
 
     # Loop over time iterations.
     for n in range(nt):
-
         # Calculate C^+ and C^- [Eq. (8)].
         if is_first_step and n == 0:
             C_minus = -2.0 * inv_dr**2.0 * 0.5 - 2j * k0_over_kp * inv_dt + 3 * inv_dzdt
@@ -145,7 +145,10 @@ def evolve_envelope(
                 for k in range(nr):
                     rhs_k = (
                         -2 * inv_dt**2 * a[j, k]
-                        - ((C_minus - chi[j, k] * 0.5 - 1j * inv_dt * D_jkn) * a_old[j, k])
+                        - (
+                            (C_minus - chi[j, k] * 0.5 - 1j * inv_dt * D_jkn)
+                            * a_old[j, k]
+                        )
                         - (
                             2
                             * np.exp(-1j * d_theta1)
