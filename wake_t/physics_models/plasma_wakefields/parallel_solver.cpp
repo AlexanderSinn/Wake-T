@@ -3,7 +3,6 @@
 setup_pybind11(cfg)
 cfg['extra_compile_args'] = ['-fopenmp', '-O3', '-ffast-math', '-march=native'] if OSError != "nt" else ['/openmp']
 cfg['extra_link_args'] = ['-lgomp'] if OSError != "nt" else []
-cfg['parallel'] = false
 %>
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>

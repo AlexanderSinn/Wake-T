@@ -5,13 +5,14 @@ from .laser_grid_ionization import LaserGridIonization
 from wake_t.utilities.numba import num_threads
 from wake_t.utilities.other import ProfStart, ProfStop
 
+import os
 import cppimport
 
-print("Import Begin")
+print("C++ Import Begin")
 cppmodule = cppimport.imp_from_filepath(
-    "/home/asinn/Wake-T/wake_t/physics_models/plasma_wakefields/parallel_solver.cpp"
+    os.path.join(os.path.dirname(__file__), "parallel_solver.cpp")
 )
-print("Import End")
+print("C++ Import End")
 
 
 class LaserGridIonizationParallel(LaserGridIonization):
