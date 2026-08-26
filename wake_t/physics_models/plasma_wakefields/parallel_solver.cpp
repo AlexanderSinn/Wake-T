@@ -15,8 +15,31 @@ cfg['parallel'] = false
 #include <omp.h>
 #include <thread>
 #include <chrono>
+#include <execution>
 
 namespace py = pybind11;
+
+template<class T>
+struct FArray1D {
+    T* ptr = nullptr;
+
+    FArray1D () = default;
+
+    FArray1D (py::array_t<T, py::array::c_style>& arr) {
+        py::buffer_info arr_info = arr.request();
+        if (arr_info.ndim != 1) {
+            throw std::invalid_argument("Wrong number of dimensions for input array");
+        }
+        ptr = static_cast<T*>(arr_info.ptr);
+    }
+
+    T& operator()(int i) const {
+        return ptr[i];
+    }
+};
+
+template<class T>
+FArray1D(py::array_t<T, py::array::c_style>& arr) -> FArray1D<T>;
 
 template<class T>
 struct FArray2D {
@@ -27,6 +50,9 @@ struct FArray2D {
 
     FArray2D (py::array_t<T, py::array::c_style>& arr) {
         py::buffer_info arr_info = arr.request();
+        if (arr_info.ndim != 2) {
+            throw std::invalid_argument("Wrong number of dimensions for input array");
+        }
         ptr = static_cast<T*>(arr_info.ptr);
         stride = arr_info.strides[0] / arr_info.itemsize;
     }
@@ -39,28 +65,31 @@ struct FArray2D {
 template<class T>
 FArray2D(py::array_t<T, py::array::c_style>& arr) -> FArray2D<T>;
 
-// template<class T>
-// struct FArray3D {
-//     T* ptr = nullptr;
-//     long long int jstride = 0;
-//     long long int kstride = 0;
+template<class T>
+struct FArray3D {
+    T* ptr = nullptr;
+    long long int jstride = 0;
+    long long int kstride = 0;
 
-//     FArray3D () = default;
+    FArray3D () = default;
 
-//     FArray3D (py::array_t<T, py::array::c_style>& arr) {
-//         py::buffer_info arr_info = arr.request();
-//         ptr = static_cast<T*>(arr_info.ptr);
-//         kstride = arr_info.strides[0] / arr_info.itemsize;
-//         jstride = arr_info.strides[1] / arr_info.itemsize;
-//     }
+    FArray3D (py::array_t<T, py::array::c_style>& arr) {
+        py::buffer_info arr_info = arr.request();
+        if (arr_info.ndim != 3) {
+            throw std::invalid_argument("Wrong number of dimensions for input array");
+        }
+        ptr = static_cast<T*>(arr_info.ptr);
+        kstride = arr_info.strides[0] / arr_info.itemsize;
+        jstride = arr_info.strides[1] / arr_info.itemsize;
+    }
 
-//     T& operator()(int i, int j, int k) const {
-//         return ptr[i + j * jstride + k * kstride];
-//     }
-// };
+    T& operator()(int i, int j, int k) const {
+        return ptr[i + j * jstride + k * kstride];
+    }
+};
 
-// template<class T>
-// FArray3D(py::array_t<T, py::array::c_style>& arr) -> FArray3D<T>;
+template<class T>
+FArray3D(py::array_t<T, py::array::c_style>& arr) -> FArray3D<T>;
 
 using cplx = std::complex<double>;
 
@@ -116,6 +145,94 @@ void send (
     current_time_step[slice].store(step, std::memory_order_release);
 }
 
+void DoGridIonization (
+    int num_ion_species,
+    FArray3D<double>& ion_densities,
+    FArray2D<double>& elec_density,
+    FArray2D<double>& chi_arr,
+    std::vector<cplx>& a_arr_this,
+    std::vector<cplx>& a_arr_prev,
+    FArray1D<int>& ion_start_index,
+    FArray1D<int>& ion_atomic_number,
+    FArray1D<double>& ion_mass,
+    double omega0,
+    FArray3D<double>& adk_prefactors,
+    bool is_linear_pol,
+    int j, int nz, int nr,
+    double d_zeta_inv
+)
+{
+    constexpr double ct_m_e = 9.1093837139e-31;
+    constexpr double ct_c = 299792458.;
+    constexpr double ct_e = 1.602176634e-19;
+
+    for (int i_s=0; i_s<num_ion_species; ++i_s) {
+        double chi_factor_ion = ct_m_e / ion_mass(i_s);
+        bool is_last_plasma = i_s + 1 == num_ion_species;
+        int max_ion_lev = ion_atomic_number(i_s);
+        int start_idx = ion_start_index(i_s);
+
+        for (int k=0; k<nr; ++k) {
+            cplx Et = cplx(0, 1) * a_arr_this[k] * omega0;
+            Et += (a_arr_prev[k] - a_arr_this[k]) * ct_c * d_zeta_inv;
+            double Ep = std::abs(Et);
+            Ep *= ct_m_e * ct_c / ct_e;
+
+            double chi = 0;
+
+            ion_densities(k, j, start_idx) = 0;
+            if (i_s == 0) {
+                elec_density(k, j) = elec_density(k, j + 1);
+            }
+
+            for (int ion_lev=0; ion_lev < max_ion_lev; ++ion_lev) {
+                int p = 0;
+                if (Ep > 1e-30) {
+                    double w_dtau_dc = (
+                        adk_prefactors(1, ion_lev, i_s)
+                        * std::pow(Ep,adk_prefactors(0, ion_lev, i_s))
+                        * std::exp(adk_prefactors(2, ion_lev, i_s) / Ep)
+                    );
+
+                    double w_dtau_ac = w_dtau_dc;
+                    if (is_linear_pol) {
+                        w_dtau_ac *= std::sqrt(Ep * adk_prefactors(3, ion_lev, i_s));
+                    }
+
+                    p = 1 - std::exp(-w_dtau_ac);
+                }
+
+                double old_weight = ion_densities(k, j, start_idx + ion_lev) +
+                    ion_densities(k, j + 1, start_idx + ion_lev);
+                double transferred_weight = old_weight * p;
+                double new_weight = old_weight - transferred_weight;
+
+                chi += new_weight * chi_factor_ion * ion_lev * ion_lev;
+
+                ion_densities(k, j, start_idx + ion_lev) = new_weight;
+                ion_densities(k, j, start_idx + ion_lev + 1) = transferred_weight;
+                elec_density(k, j) += transferred_weight;
+            }
+
+            ion_densities(k, j, start_idx + max_ion_lev) +=
+                 ion_densities(k, j + 1, start_idx + max_ion_lev);
+
+            chi += ion_densities(k, j, start_idx + max_ion_lev)
+                * chi_factor_ion * max_ion_lev * max_ion_lev;
+
+            if (is_last_plasma) {
+                chi += elec_density(k, j);
+            }
+
+            if (i_s == 0) {
+                chi_arr(k, j) = chi;
+            } else {
+                chi_arr(k, j) += chi;
+            }
+        }
+    }
+}
+
 void SolveOneSlice (
     int n, int j, int nz, int nr,
     std::vector<std::atomic<int>>& current_time_step,
@@ -130,7 +247,17 @@ void SolveOneSlice (
     std::vector<cplx>& a_new_jp2,
     std::vector<cplx>& d_main,
     const std::vector<double>& L_minus_over_2,
-    const std::vector<double>& L_plus_over_2
+    const std::vector<double>& L_plus_over_2,
+    int num_ion_species,
+    FArray3D<double>& ion_densities,
+    FArray2D<double>& elec_density,
+    FArray1D<int>& ion_start_index,
+    FArray1D<int>& ion_atomic_number,
+    FArray1D<double>& ion_mass,
+    double omega0,
+    FArray3D<double>& adk_prefactors,
+    bool is_linear_pol,
+    double d_zeta_inv
 )
 {
     if (j == nz-1) {
@@ -209,6 +336,24 @@ void SolveOneSlice (
     TDMA(nr, L_minus_over_2.data()+1, d_main.data(), L_plus_over_2.data(),
         rhs.data(), a_new_jp1.data());
 
+    // calculate chi(k, j) using a_arr(k, j) = a_new_jp1 and and a_arr(k, j+1) = a_new_jp2
+
+    DoGridIonization(
+        num_ion_species,
+        ion_densities,
+        elec_density,
+        chi_arr,
+        a_new_jp1,
+        a_new_jp2,
+        ion_start_index,
+        ion_atomic_number,
+        ion_mass,
+        omega0,
+        adk_prefactors,
+        is_linear_pol,
+        j, nz, nr, d_zeta_inv
+    );
+
     if (j == 0) {
         for (int k=0; k<nr; ++k) {
             a_old_arr(k, 0) = a_arr(k, 0);
@@ -237,12 +382,28 @@ void parallel_solver (
     long long int nt,
     bool use_phase,
     bool is_first_step,
+    int num_ion_species,
+    py::array_t<double, py::array::c_style> ion_densities_arr,
+    py::array_t<double, py::array::c_style> elec_density_arr,
+    py::array_t<int, py::array::c_style> ion_start_index_arr,
+    py::array_t<int, py::array::c_style> ion_atomic_number_arr,
+    py::array_t<double, py::array::c_style> ion_mass_arr,
+    double omega0,
+    py::array_t<double, py::array::c_style> adk_prefactors_arr,
+    bool is_linear_pol,
+    double d_zeta_inv,
     int num_threads
 )
 {
     FArray2D a_arr{a};
     FArray2D a_old_arr{a_old};
     FArray2D chi_arr{chi};
+    FArray3D ion_densities{ion_densities_arr};
+    FArray2D elec_density{elec_density_arr};
+    FArray1D ion_start_index{ion_start_index_arr};
+    FArray1D ion_atomic_number{ion_atomic_number_arr};
+    FArray1D ion_mass{ion_mass_arr};
+    FArray3D adk_prefactors{adk_prefactors_arr};
 
     py::gil_scoped_release release;
 
@@ -322,7 +483,17 @@ void parallel_solver (
                     a_new_jp2,
                     d_main,
                     L_minus_over_2,
-                    L_plus_over_2
+                    L_plus_over_2,
+                    num_ion_species,
+                    ion_densities,
+                    elec_density,
+                    ion_start_index,
+                    ion_atomic_number,
+                    ion_mass,
+                    omega0,
+                    adk_prefactors,
+                    is_linear_pol,
+                    d_zeta_inv
                 );
             }
         }
