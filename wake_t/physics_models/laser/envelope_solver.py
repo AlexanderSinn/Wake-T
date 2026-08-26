@@ -9,7 +9,7 @@ Authors: Wilbert den Hertog, Ángel Ferran Pousa, Carlo Benedetti
 import numpy as np
 import scipy.constants as ct
 
-from wake_t.utilities.numba import njit_serial, num_threads
+from wake_t.utilities.numba import njit_serial
 from .tdma import TDMA
 from .utils import unwrap
 
