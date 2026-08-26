@@ -239,7 +239,7 @@ class LaserGridIonization(RZWakefield):
             "H": {"mass_u": 1.007975, "ionization_energy_eV": [13.59843449]},
             "H2": {
                 "mass_u": 2.015950,
-                "ionization_energy_eV": [15.42593000, 13.59843449]
+                "ionization_energy_eV": [15.42593000, 13.59843449],
             },
             "He": {
                 "mass_u": 4.002602,
