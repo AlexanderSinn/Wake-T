@@ -173,17 +173,26 @@ void DoGridIonization (
         int start_idx = ion_start_index(i_s);
 
         for (int k=0; k<nr; ++k) {
+
+            if (i_s == 0) {
+                chi_arr(k, j) = 0;
+                elec_density(k, j) = elec_density(k, j + 1);
+            }
+            for (int ion_lev=0; ion_lev <= max_ion_lev; ++ion_lev) {
+                ion_densities(k, j, start_idx + ion_lev)
+                    = ion_densities(k, j + 1, start_idx + ion_lev);
+            }
+
             cplx Et = cplx(0, 1) * a_arr_this[k] * omega0;
             Et += (a_arr_prev[k] - a_arr_this[k]) * ct_c * d_zeta_inv;
             double Ep = std::abs(Et);
             Ep *= ct_m_e * ct_c / ct_e;
 
-            double chi = 0;
-
-            ion_densities(k, j, start_idx) = 0;
-            if (i_s == 0) {
-                elec_density(k, j) = elec_density(k, j + 1);
+            if (Ep <= 1e9) {
+                continue;
             }
+
+            double chi = 0;
 
             for (int ion_lev=0; ion_lev < max_ion_lev; ++ion_lev) {
                 double p = 0;
@@ -202,20 +211,16 @@ void DoGridIonization (
                     p = 1 - std::exp(-w_dtau_ac);
                 }
 
-                double old_weight = ion_densities(k, j, start_idx + ion_lev) +
-                    ion_densities(k, j + 1, start_idx + ion_lev);
+                double old_weight = ion_densities(k, j, start_idx + ion_lev);
                 double transferred_weight = old_weight * p;
                 double new_weight = old_weight - transferred_weight;
 
                 chi += new_weight * chi_factor_ion * ion_lev * ion_lev;
 
                 ion_densities(k, j, start_idx + ion_lev) = new_weight;
-                ion_densities(k, j, start_idx + ion_lev + 1) = transferred_weight;
+                ion_densities(k, j, start_idx + ion_lev + 1) += transferred_weight;
                 elec_density(k, j) += transferred_weight;
             }
-
-            ion_densities(k, j, start_idx + max_ion_lev) +=
-                 ion_densities(k, j + 1, start_idx + max_ion_lev);
 
             chi += ion_densities(k, j, start_idx + max_ion_lev)
                 * chi_factor_ion * max_ion_lev * max_ion_lev;
@@ -224,11 +229,7 @@ void DoGridIonization (
                 chi += elec_density(k, j);
             }
 
-            if (i_s == 0) {
-                chi_arr(k, j) = chi;
-            } else {
-                chi_arr(k, j) += chi;
-            }
+            chi_arr(k, j) += chi;
         }
     }
 }
