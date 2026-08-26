@@ -25,7 +25,7 @@ struct FArray1D {
 
     FArray1D () = default;
 
-    FArray1D (py::array_t<T, py::array::c_style>& arr) {
+    FArray1D (py::array_t<T>& arr) {
         py::buffer_info arr_info = arr.request();
         if (arr_info.ndim != 1) {
             throw std::invalid_argument("Wrong number of dimensions for input array");
@@ -39,7 +39,7 @@ struct FArray1D {
 };
 
 template<class T>
-FArray1D(py::array_t<T, py::array::c_style>& arr) -> FArray1D<T>;
+FArray1D(py::array_t<T>& arr) -> FArray1D<T>;
 
 template<class T>
 struct FArray2D {
@@ -48,7 +48,7 @@ struct FArray2D {
 
     FArray2D () = default;
 
-    FArray2D (py::array_t<T, py::array::c_style>& arr) {
+    FArray2D (py::array_t<T>& arr) {
         py::buffer_info arr_info = arr.request();
         if (arr_info.ndim != 2) {
             throw std::invalid_argument("Wrong number of dimensions for input array");
@@ -63,7 +63,7 @@ struct FArray2D {
 };
 
 template<class T>
-FArray2D(py::array_t<T, py::array::c_style>& arr) -> FArray2D<T>;
+FArray2D(py::array_t<T>& arr) -> FArray2D<T>;
 
 template<class T>
 struct FArray3D {
@@ -73,7 +73,7 @@ struct FArray3D {
 
     FArray3D () = default;
 
-    FArray3D (py::array_t<T, py::array::c_style>& arr) {
+    FArray3D (py::array_t<T>& arr) {
         py::buffer_info arr_info = arr.request();
         if (arr_info.ndim != 3) {
             throw std::invalid_argument("Wrong number of dimensions for input array");
@@ -89,7 +89,7 @@ struct FArray3D {
 };
 
 template<class T>
-FArray3D(py::array_t<T, py::array::c_style>& arr) -> FArray3D<T>;
+FArray3D(py::array_t<T>& arr) -> FArray3D<T>;
 
 using cplx = std::complex<double>;
 
@@ -186,7 +186,7 @@ void DoGridIonization (
             }
 
             for (int ion_lev=0; ion_lev < max_ion_lev; ++ion_lev) {
-                int p = 0;
+                double p = 0;
                 if (Ep > 1e-30) {
                     double w_dtau_dc = (
                         adk_prefactors(1, ion_lev, i_s)
@@ -337,7 +337,6 @@ void SolveOneSlice (
         rhs.data(), a_new_jp1.data());
 
     // calculate chi(k, j) using a_arr(k, j) = a_new_jp1 and and a_arr(k, j+1) = a_new_jp2
-
     DoGridIonization(
         num_ion_species,
         ion_densities,
@@ -368,9 +367,9 @@ void SolveOneSlice (
 }
 
 void parallel_solver (
-    py::array_t<cplx, py::array::c_style> a,
-    py::array_t<cplx, py::array::c_style> a_old,
-    py::array_t<double, py::array::c_style> chi,
+    py::array_t<cplx>& a,
+    py::array_t<cplx>& a_old,
+    py::array_t<double>& chi,
     double k0,
     double kp,
     double zmin,
@@ -383,13 +382,13 @@ void parallel_solver (
     bool use_phase,
     bool is_first_step,
     int num_ion_species,
-    py::array_t<double, py::array::c_style> ion_densities_arr,
-    py::array_t<double, py::array::c_style> elec_density_arr,
-    py::array_t<int, py::array::c_style> ion_start_index_arr,
-    py::array_t<int, py::array::c_style> ion_atomic_number_arr,
-    py::array_t<double, py::array::c_style> ion_mass_arr,
+    py::array_t<double>& ion_densities_arr,
+    py::array_t<double>& elec_density_arr,
+    py::array_t<int>& ion_start_index_arr,
+    py::array_t<int>& ion_atomic_number_arr,
+    py::array_t<double>& ion_mass_arr,
     double omega0,
-    py::array_t<double, py::array::c_style> adk_prefactors_arr,
+    py::array_t<double>& adk_prefactors_arr,
     bool is_linear_pol,
     double d_zeta_inv,
     int num_threads

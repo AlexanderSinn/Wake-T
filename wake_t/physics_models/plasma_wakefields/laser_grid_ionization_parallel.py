@@ -22,8 +22,9 @@ class LaserGridIonizationParallel(LaserGridIonization):
                 k_0 = 2 * np.pi / self.laser.l_0
                 k_p = np.sqrt(ct.e**2 * self.n_p / (ct.m_e * ct.epsilon_0)) / ct.c
 
-                if self.laser.use_subgrid:
-                    self.chi[2:-2, 2:-2] = self.laser._interpolate_chi_to_subgrid(self.chi[2:-2, 2:-2])
+                assert not self.laser.use_subgrid
+                # if self.laser.use_subgrid:
+                #     self.chi[2:-2, 2:-2] = self.laser._interpolate_chi_to_subgrid(self.chi[2:-2, 2:-2])
 
                 omega0 = 2 * ct.pi * ct.c / self.laser.l_0
 
@@ -43,8 +44,8 @@ class LaserGridIonizationParallel(LaserGridIonization):
                     self.laser.solver_params["use_phase"],
                     self.laser.n_steps == 0,
                     len(self.ion_species),
-                    self.ion_densities,
-                    self.elec_density,
+                    self.ion_densities[:, 2:-1, 2:-2],
+                    self.elec_density[2:-1, 2:-2],
                     self.ion_start_index.astype(np.int32),
                     self.ion_atomic_number.astype(np.int32),
                     self.ion_mass,
