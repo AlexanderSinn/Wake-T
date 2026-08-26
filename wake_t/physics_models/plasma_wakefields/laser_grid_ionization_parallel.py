@@ -24,7 +24,9 @@ class LaserGridIonizationParallel(LaserGridIonization):
                 k_p = np.sqrt(ct.e**2 * self.n_p / (ct.m_e * ct.epsilon_0)) / ct.c
 
                 if self.laser.use_subgrid:
-                    raise ValueError("Cannot use laser subgrid with parallel laser solver")
+                    raise ValueError(
+                        "Cannot use laser subgrid with parallel laser solver"
+                    )
 
                 omega0 = 2 * ct.pi * ct.c / self.laser.l_0
 
