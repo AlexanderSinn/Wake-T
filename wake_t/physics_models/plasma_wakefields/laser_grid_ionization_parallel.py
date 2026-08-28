@@ -389,21 +389,32 @@ class LaserGridIonizationParallel(RZWakefield):
                 omega0 = 2 * ct.pi * ct.c / self.laser.l_0
 
                 substep_pos = ct.c * (
-                    self.t - self.dt_update + np.arange(self.laser.solver_params["nt"])
-                    * self.laser.solver_params["dt"])
+                    self.t
+                    - self.dt_update
+                    + np.arange(self.laser.solver_params["nt"])
+                    * self.laser.solver_params["dt"]
+                )
                 r, z = np.meshgrid(self.r_fld, substep_pos)
 
                 initial_elec_density = self.density_function(z, r) / self.n_p
                 if self.r_max_plasma is not None:
-                    initial_elec_density = np.where(self.r_fld > self.r_max_plasma, 0, initial_elec_density)
+                    initial_elec_density = np.where(
+                        self.r_fld > self.r_max_plasma, 0, initial_elec_density
+                    )
 
                 initial_ion_densities = np.zeros(
-                    (np.sum(self.ion_atomic_number + 1), self.laser.solver_params["nt"], self.n_r)
+                    (
+                        np.sum(self.ion_atomic_number + 1),
+                        self.laser.solver_params["nt"],
+                        self.n_r,
+                    )
                 )
                 for i, density in enumerate(self.initial_ion_densities):
                     density_ion = density(z, r) / self.n_p
                     if self.r_max_plasma is not None:
-                        density_ion = np.where(self.r_fld > self.r_max_plasma, 0, density_ion)
+                        density_ion = np.where(
+                            self.r_fld > self.r_max_plasma, 0, density_ion
+                        )
                     initial_ion_densities[self.ion_start_index[i], :, :] = density_ion
 
                 cppmodule.parallel_solver(
