@@ -250,7 +250,9 @@ void SolveOneSlice (
     const std::vector<double>& L_plus_over_2,
     int num_ion_species,
     FArray3D<double>& ion_densities,
+    FArray3D<double>& initial_ion_densities,
     FArray2D<double>& elec_density,
+    FArray2D<double>& initial_elec_density,
     FArray1D<int>& ion_start_index,
     FArray1D<int>& ion_atomic_number,
     FArray1D<double>& ion_mass,
@@ -337,6 +339,21 @@ void SolveOneSlice (
         rhs.data(), a_new_jp1.data());
 
     // calculate chi(k, j) using a_arr(k, j) = a_new_jp1 and and a_arr(k, j+1) = a_new_jp2
+
+    if (j == nz - 1) {
+        for (int k=0; k<nr; ++k) {
+            elec_density(k, j+1) = initial_elec_density(k, n);
+            for (int i_s=0; i_s<num_ion_species; ++i_s) {
+                int max_ion_lev = ion_atomic_number(i_s);
+                int start_idx = ion_start_index(i_s);
+                for (int ion_lev=0; ion_lev <= max_ion_lev; ++ion_lev) {
+                    ion_densities(k, j+1, start_idx + ion_lev) =
+                        initial_ion_densities(k, n, start_idx + ion_lev);
+                }
+            }
+        }
+    }
+
     DoGridIonization(
         num_ion_species,
         ion_densities,
@@ -383,7 +400,9 @@ void parallel_solver (
     bool is_first_step,
     int num_ion_species,
     py::array_t<double>& ion_densities_arr,
+    py::array_t<double>& initial_ion_densities_arr,
     py::array_t<double>& elec_density_arr,
+    py::array_t<double>& initial_elec_density_arr,
     py::array_t<int>& ion_start_index_arr,
     py::array_t<int>& ion_atomic_number_arr,
     py::array_t<double>& ion_mass_arr,
@@ -398,7 +417,9 @@ void parallel_solver (
     FArray2D a_old_arr{a_old};
     FArray2D chi_arr{chi};
     FArray3D ion_densities{ion_densities_arr};
+    FArray3D initial_ion_densities{initial_ion_densities_arr};
     FArray2D elec_density{elec_density_arr};
+    FArray2D initial_elec_density{initial_elec_density_arr};
     FArray1D ion_start_index{ion_start_index_arr};
     FArray1D ion_atomic_number{ion_atomic_number_arr};
     FArray1D ion_mass{ion_mass_arr};
@@ -485,7 +506,9 @@ void parallel_solver (
                     L_plus_over_2,
                     num_ion_species,
                     ion_densities,
+                    initial_ion_densities,
                     elec_density,
+                    initial_elec_density,
                     ion_start_index,
                     ion_atomic_number,
                     ion_mass,
