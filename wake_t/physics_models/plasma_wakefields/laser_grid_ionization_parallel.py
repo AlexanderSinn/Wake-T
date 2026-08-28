@@ -11,12 +11,9 @@ from wake_t.utilities.other import ProfStart, ProfStop
 import os
 import cppimport
 
-print("C++ Import Begin")
 cppmodule = cppimport.imp_from_filepath(
     os.path.join(os.path.dirname(__file__), "parallel_solver.cpp")
 )
-print("C++ Import End")
-
 
 class LaserGridIonizationParallel(RZWakefield):
     """
