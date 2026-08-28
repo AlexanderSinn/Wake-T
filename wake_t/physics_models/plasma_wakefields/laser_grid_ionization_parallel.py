@@ -15,6 +15,7 @@ cppmodule = cppimport.imp_from_filepath(
     os.path.join(os.path.dirname(__file__), "parallel_solver.cpp")
 )
 
+
 class LaserGridIonizationParallel(RZWakefield):
     """
     This model can be used to propagate laser pulses through a neutral gas or
