@@ -19,7 +19,6 @@ print("C++ Import End")
 
 
 class LaserGridIonizationParallel(RZWakefield):
-
     """
     This model can be used to propagate laser pulses through a neutral gas or
     plasma that gets ionized from the laser. Specifically, it can be used
@@ -359,7 +358,7 @@ class LaserGridIonizationParallel(RZWakefield):
             self.adk_prefactors,
             self.laser.polarization == "linear",
             1 / np.abs(self.xi_fld[1] - self.xi_fld[0]),
-            num_threads
+            num_threads,
         )
 
         if self.species_rho_diags:
