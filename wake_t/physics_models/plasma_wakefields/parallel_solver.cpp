@@ -149,15 +149,15 @@ void DoGridIonization (
     FArray3D<double>& ion_densities,
     FArray2D<double>& elec_density,
     FArray2D<double>& chi_arr,
-    std::vector<cplx>& a_arr_this,
-    std::vector<cplx>& a_arr_prev,
+    const cplx* a_arr_this,
+    const cplx* a_arr_prev,
     FArray1D<int>& ion_start_index,
     FArray1D<int>& ion_atomic_number,
     FArray1D<double>& ion_mass,
     double omega0,
     FArray3D<double>& adk_prefactors,
     bool is_linear_pol,
-    int j, int nz, int nr,
+    int j, int r_begin, int r_end,
     double d_zeta_inv
 )
 {
@@ -171,7 +171,7 @@ void DoGridIonization (
         int max_ion_lev = ion_atomic_number(i_s);
         int start_idx = ion_start_index(i_s);
 
-        for (int k=0; k<nr; ++k) {
+        for (int k=r_begin; k<r_end; ++k) {
 
             if (i_s == 0) {
                 chi_arr(k, j) = 0;
@@ -342,15 +342,15 @@ void SolveOneSlice (
         ion_densities,
         elec_density,
         chi_arr,
-        a_new_jp1,
-        a_new_jp2,
+        a_new_jp1.data(),
+        a_new_jp2.data(),
         ion_start_index,
         ion_atomic_number,
         ion_mass,
         omega0,
         adk_prefactors,
         is_linear_pol,
-        j, nz, nr, d_zeta_inv
+        j, 0, nr, d_zeta_inv
     );
 
     if (j == 0) {
@@ -499,6 +499,66 @@ void parallel_solver (
     }
 }
 
+void calculate_grid_ionization (
+    py::array_t<cplx>& a,
+    py::array_t<double>& chi,
+    long long int nz,
+    long long int nr,
+    int num_ion_species,
+    py::array_t<double>& ion_densities_arr,
+    py::array_t<double>& elec_density_arr,
+    py::array_t<int>& ion_start_index_arr,
+    py::array_t<int>& ion_atomic_number_arr,
+    py::array_t<double>& ion_mass_arr,
+    double omega0,
+    py::array_t<double>& adk_prefactors_arr,
+    bool is_linear_pol,
+    double d_zeta_inv,
+    int num_threads
+)
+{
+    FArray2D a_arr{a};
+    FArray2D chi_arr{chi};
+    FArray3D ion_densities{ion_densities_arr};
+    FArray2D elec_density{elec_density_arr};
+    FArray1D ion_start_index{ion_start_index_arr};
+    FArray1D ion_atomic_number{ion_atomic_number_arr};
+    FArray1D ion_mass{ion_mass_arr};
+    FArray3D adk_prefactors{adk_prefactors_arr};
+
+    py::gil_scoped_release release;
+
+    omp_set_num_threads(num_threads);
+
+#pragma omp parallel
+    {
+        const int ithread = omp_get_thread_num();
+        const int nthreads = omp_get_num_threads();
+
+        const int r_begin = (std::size_t(ithread) * nr) / nthreads;
+        const int r_end = (std::size_t(ithread+1) * nr) / nthreads;
+
+        for (int j=nz-1; j>=0; --j) {
+            DoGridIonization(
+                num_ion_species,
+                ion_densities,
+                elec_density,
+                chi_arr,
+                &a_arr(0, j),
+                &a_arr(0, j+1),
+                ion_start_index,
+                ion_atomic_number,
+                ion_mass,
+                omega0,
+                adk_prefactors,
+                is_linear_pol,
+                j, r_begin, r_end, d_zeta_inv
+            );
+        }
+    }
+}
+
 PYBIND11_MODULE(parallel_solver, m) {
     m.def("parallel_solver", &parallel_solver, "doc");
+    m.def("calculate_grid_ionization", &calculate_grid_ionization, "doc");
 }
